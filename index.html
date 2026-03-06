@@ -639,26 +639,41 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 (function initLock(){
   const session=sessionStorage.getItem('ft_unlocked');
   if(session==='1'){
-    document.getElementById('lockScreen').style.display='none';
-    document.getElementById('appShell').style.display='';
+    const ls = document.getElementById('lockScreen');
+    const as = document.getElementById('appShell');
+    if(ls) ls.style.display='none';
+    if(as) as.style.display='grid';
     return;
   }
   setTimeout(()=>{ const el=document.getElementById('lockPw'); if(el) el.focus(); },100);
 })();
 function checkLock(){
-  const stored=localStorage.getItem('ft_pw')||'1234';
-  const val=document.getElementById('lockPw').value;
+  const stored=(localStorage.getItem('ft_pw')||'1234').trim();
+  const val=document.getElementById('lockPw').value.trim();
   const errEl=document.getElementById('lockErr');
+  
   if(val===stored){
     sessionStorage.setItem('ft_unlocked','1');
-    document.getElementById('lockScreen').style.display='none';
-    document.getElementById('appShell').style.display='';
+    // 잠금 화면 제거 및 메인 화면 표시
+    const ls = document.getElementById('lockScreen');
+    const as = document.getElementById('appShell');
+    if(ls) ls.style.display='none';
+    if(as) as.style.display='grid'; // .shell 클래스가 display: grid 이므로 grid로 설정
     errEl.textContent='';
+    
+    // 화면 표시 후 초기화 작업
+    if(typeof renderDashboard === 'function') renderDashboard();
   } else {
     const inp=document.getElementById('lockPw');
-    inp.classList.add('err'); inp.value='';
-    errEl.textContent='비밀번호가 틀렸습니다';
-    setTimeout(()=>{ inp.classList.remove('err'); inp.focus(); },400);
+    if(inp) {
+      inp.classList.add('err'); 
+      inp.value='';
+      errEl.textContent='비밀번호가 틀렸습니다';
+      setTimeout(()=>{ 
+        inp.classList.remove('err'); 
+        inp.focus(); 
+      },400);
+    }
   }
 }
 function changePw(){
