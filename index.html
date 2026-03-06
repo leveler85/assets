@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Futures Tracker</title>
+<title>Assets Tracker</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%23060d14'/><polyline points='8,48 20,32 30,38 44,18 56,24' stroke='%2300ff88' stroke-width='4' fill='none' stroke-linecap='round' stroke-linejoin='round'/><circle cx='56' cy='24' r='4' fill='%2300ff88'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -256,7 +256,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 <header class="topbar">
   <a class="brand" onclick="showPage('dashboard')" href="javascript:void(0)">
     <div class="brand-icon"></div>
-    <div><div class="brand-name">FUTURES TRACKER</div><span class="brand-sub">COINEX · DAILY TRADING</span></div>
+    <div><div class="brand-name">ASSETS TRACKER</div><span class="brand-sub">COINEX · TOTAL ASSETS</span></div>
   </a>
   <div class="topbar-right">
     <span class="tb-clock" id="clockEl">—</span>
@@ -294,7 +294,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 <!-- ── DASHBOARD ── -->
 <div class="page on" id="page-dashboard">
   <div class="pg-head">
-    <div><div class="pg-title">COIN<em>EX</em> DASHBOARD</div><div class="pg-sub">데일리 트레이딩 자산 트래킹</div></div>
+    <div><div class="pg-title">ASSETS <em>TRACKER</em></div><div class="pg-sub">CoinEx 전체 자산 (SPOT + FUTURES + EARN) 트래킹</div></div>
     <div class="pg-actions">
       <button class="btn btn-ghost" onclick="openBaselineModal()">📍 기준시점</button>
       <button class="btn btn-sky" onclick="triggerCoinexSync()">⟳ API 동기화</button>
@@ -305,30 +305,52 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
     <span>📍 기준시점: <strong id="baselineBannerDate">—</strong> 이후부터 손익 계산 중</span>
     <button onclick="clearBaseline()" style="background:none;border:none;color:rgba(255,187,0,.6);cursor:pointer;font-size:11px;font-family:var(--mono)">✕ 초기화</button>
   </div>
-  <div class="kpi-grid">
-    <div class="kpi-card kc-green"><div class="kpi-arrow">💰</div><div class="kpi-label"><span class="kpi-dot"></span>TOTAL BALANCE</div><div class="kpi-main col-white" id="k-bal">—</div><div class="kpi-sub"><span class="lbl">기준일:</span><span class="val m" id="k-bal-date">—</span></div></div>
-    <div class="kpi-card" id="k-pnl-card"><div class="kpi-arrow" id="k-pnl-arrow">📈</div><div class="kpi-label"><span class="kpi-dot"></span>TOTAL PnL</div><div class="kpi-main" id="k-pnl">—</div><div class="kpi-sub"><span class="lbl">수익률:</span><span class="val" id="k-pnl-pct">—</span></div></div>
-    <div class="kpi-card kc-blue"><div class="kpi-arrow">📅</div><div class="kpi-label"><span class="kpi-dot"></span>TODAY PnL</div><div class="kpi-main" id="k-today">—</div><div class="kpi-sub"><span class="lbl">오늘 잔고:</span><span class="val m" id="k-today-bal">—</span></div></div>
-  </div>
-  <div class="kpi-grid-2">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+    <div class="kpi-card kc-green"><div class="kpi-arrow">💰</div><div class="kpi-label"><span class="kpi-dot"></span>TOTAL ASSETS</div><div class="kpi-main col-white" id="k-bal">—</div><div class="kpi-sub"><span class="lbl">최근 기록:</span><span class="val m" id="k-bal-date">—</span></div></div>
+    <div class="kpi-card" id="k-pnl-card"><div class="kpi-arrow" id="k-pnl-arrow">📈</div><div class="kpi-label"><span class="kpi-dot"></span>기준 대비 PnL</div><div class="kpi-main" id="k-pnl">—</div><div class="kpi-sub"><span class="lbl">수익률:</span><span class="val" id="k-pnl-pct">—</span></div></div>
     <div class="kpi-card kc-amber"><div class="kpi-arrow">↕</div><div class="kpi-label"><span class="kpi-dot"></span>전일 대비</div><div class="kpi-main" id="k-yest">—</div><div class="kpi-sub"><span class="lbl">전일 잔고:</span><span class="val m" id="k-yest-sub">—</span></div></div>
-    <div class="kpi-card kc-purple"><div class="kpi-arrow">📆</div><div class="kpi-label"><span class="kpi-dot"></span>이번주 PNL</div><div class="kpi-main" id="k-week">—</div><div class="kpi-sub"><span class="lbl">이번주 기록:</span><span class="val m" id="k-week-sub">—</span></div></div>
-    <div class="kpi-card kc-blue"><div class="kpi-arrow">🗓</div><div class="kpi-label"><span class="kpi-dot"></span>이번달 PNL</div><div class="kpi-main" id="k-month">—</div><div class="kpi-sub"><span class="lbl">이번달 기록:</span><span class="val m" id="k-month-sub">—</span></div></div>
+    <div class="kpi-card kc-purple"><div class="kpi-arrow">📆</div><div class="kpi-label"><span class="kpi-dot"></span>최근 7일 PNL</div><div class="kpi-main" id="k-week">—</div><div class="kpi-sub"><span class="lbl">기간:</span><span class="val m" id="k-week-sub">—</span></div></div>
   </div>
-  <div class="chart-row">
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:20px">
+    <div class="kpi-card kc-blue"><div class="kpi-arrow">🗓</div><div class="kpi-label"><span class="kpi-dot"></span>이번달 PNL</div><div class="kpi-main" id="k-month">—</div><div class="kpi-sub"><span class="lbl">이번달 기록:</span><span class="val m" id="k-month-sub">—</span></div></div>
+    <div class="kpi-card kc-green" id="k-baseline-card"><div class="kpi-arrow">📍</div><div class="kpi-label"><span class="kpi-dot"></span>기준시점</div><div class="kpi-main col-amber" id="k-baseline-val" style="font-size:20px">미설정</div><div class="kpi-sub"><span class="lbl">기준 잔고:</span><span class="val m" id="k-baseline-bal">—</span>&nbsp;<button onclick="openBaselineModal()" style="background:rgba(255,187,0,.15);border:1px solid rgba(255,187,0,.3);color:var(--amber);font-family:var(--mono);font-size:8px;padding:2px 7px;border-radius:3px;cursor:pointer">변경</button></div></div>
+  </div>
+  <!-- 잔고 추이 + 일별기록 -->
+  <div class="chart-row" style="margin-bottom:16px">
     <div class="panel">
-      <div class="panel-head"><div class="panel-title">잔고 추이</div><div class="tab-group"><button class="tab-item on" onclick="setTab('bal',this)">잔고</button><button class="tab-item" onclick="setTab('pnl',this)">누적 PnL</button></div></div>
-      <div style="position:relative;height:250px"><canvas id="mainChart"></canvas></div>
+      <div class="panel-head">
+        <div class="panel-title">자산 추이</div>
+        <div class="tab-group">
+          <button class="tab-item on" onclick="setTab('bal',this)">잔고</button>
+          <button class="tab-item" onclick="setTab('pnl',this)">누적 PnL</button>
+        </div>
+      </div>
+      <div style="position:relative;height:260px"><canvas id="mainChart"></canvas></div>
     </div>
     <div class="panel" style="padding:16px">
-      <div class="panel-head" style="margin-bottom:10px"><div class="panel-title">일별 기록</div><span style="font-family:var(--mono);font-size:8px;color:var(--muted)" id="entryCount">0일</span></div>
+      <div class="panel-head" style="margin-bottom:10px">
+        <div class="panel-title">일별 기록</div>
+        <span style="font-family:var(--mono);font-size:8px;color:var(--muted)" id="entryCount">0일</span>
+      </div>
       <div class="dt-head"><span>날짜</span><span>추이</span><span style="text-align:right">잔고</span><span style="text-align:right">PnL</span><span></span></div>
       <div class="dt-body" id="dayList"></div>
     </div>
   </div>
-  <div class="chart-row-2">
-    <div class="panel"><div class="panel-head"><div class="panel-title">일별 수익</div></div><div style="position:relative;height:190px"><canvas id="dailyBar"></canvas></div></div>
-    <div class="panel"><div class="panel-head"><div class="panel-title">월별 PnL</div></div><div style="position:relative;height:190px"><canvas id="monthlyBar"></canvas></div></div>
+  <!-- 일별 수익 + 월별 PnL -->
+  <div class="chart-row-2" style="margin-bottom:16px">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">일별 수익/손실</div></div>
+      <div style="position:relative;height:200px"><canvas id="dailyBar"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">월별 PnL 합계</div></div>
+      <div style="position:relative;height:200px"><canvas id="monthlyBar"></canvas></div>
+    </div>
+  </div>
+  <!-- 주간 성과 테이블 -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-head"><div class="panel-title">주간 성과</div><span style="font-family:var(--mono);font-size:8px;color:var(--muted)">최근 8주</span></div>
+    <div id="weeklyTable" style="overflow-x:auto"></div>
   </div>
 </div>
 
@@ -347,7 +369,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 <!-- ── HODL ── -->
 <div class="page" id="page-hodl">
   <div class="pg-head">
-    <div><div class="pg-title">존버 <em>PORTFOLIO</em></div><div class="pg-sub">고점 물린 포지션 — 스냅샷 기록 · API 자동 조회 가능</div></div>
+    <div><div class="pg-title">존버 <em>PORTFOLIO</em></div><div class="pg-sub">타 거래소 자산 트래킹 — 총 자산(SPOT+FUTURES+EARN) 자동 동기화</div></div>
     <div class="pg-actions">
       <button class="btn btn-sky" onclick="syncAllHodl()">⟳ 전체 API 동기화</button>
       <button class="btn btn-amber" onclick="openHodlModal()">＋ 수동 업데이트</button>
@@ -501,7 +523,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
     <div class="proxy-card">
       <div class="pc-title">③ 존버 거래소 API 키 (잔고 스냅샷)</div>
       <div style="font-family:var(--mono);font-size:8px;color:var(--muted);line-height:1.9;margin-bottom:14px">
-        ℹ 각 거래소의 <strong style="color:rgba(255,255,255,.7)">읽기 전용(Read Only)</strong> API 키를 등록하면 존버 페이지에서 잔고를 자동으로 가져옵니다<br>
+        ℹ 각 거래소의 <strong style="color:rgba(255,255,255,.7)">읽기 전용(Read Only)</strong> API 키를 등록하면 총 자산(SPOT+FUTURES+EARN)을 자동으로 가져옵니다<br>
         ℹ Worker가 설정되어 있어야 작동합니다 · 등록하지 않은 거래소는 수동 입력 사용
       </div>
       <div class="exch-api-list" id="exchApiList"><!-- JS로 렌더링 --></div>
@@ -572,21 +594,23 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 
 <!-- BASELINE MODAL -->
 <div class="modal-overlay" id="baselineModal">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:480px">
     <div class="modal-head"><div class="modal-title">📍 기준시점 설정</div><button class="modal-x" onclick="closeBaselineModal()">×</button></div>
     <div class="modal-body">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.9;margin-bottom:16px;padding:12px;background:rgba(255,187,0,.05);border:1px solid rgba(255,187,0,.15);border-radius:6px">
-        ℹ 선택한 날짜를 <strong style="color:var(--amber)">기준(±0)</strong>으로 설정합니다.<br>
-        그 다음날부터 손익이 계산됩니다.<br>
-        API 테스트 데이터가 섞인 경우 실제 거래 시작일을 선택하세요.
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.9;margin-bottom:14px;padding:10px 12px;background:rgba(255,187,0,.05);border:1px solid rgba(255,187,0,.15);border-radius:6px">
+        ℹ 선택한 날짜 잔고를 <strong style="color:var(--amber)">기준(±0)</strong>으로 설정합니다.<br>
+        그 이후부터 손익이 계산됩니다. 과거 날짜도 자유롭게 선택 가능합니다.
       </div>
-      <div class="form-block" style="margin-bottom:12px;gap:12px">
-        <div class="f-group"><label class="f-label">기준 날짜 선택</label><input class="f-input" type="date" id="baselineInput" oninput="updateBaselinePreview()"></div>
+      <div class="form-block" style="margin-bottom:10px;gap:10px">
+        <div class="f-group"><label class="f-label">기준 날짜 직접 입력</label><input class="f-input" type="date" id="baselineInput" oninput="updateBaselinePreview()"></div>
         <div id="baselinePreview" style="display:none;padding:10px 12px;background:var(--bg3);border-radius:5px;font-family:var(--mono);font-size:11px;color:var(--muted)"></div>
       </div>
+      <div style="font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.5);margin-bottom:8px">▸ 기록된 날짜에서 바로 선택</div>
+      <div id="baselineDateList" style="max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:14px"></div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeBaselineModal()">취소</button>
-        <button class="btn btn-amber" style="flex:2" onclick="applyBaseline()">✓ 기준시점 적용</button>
+        <button class="btn btn-ghost" style="color:var(--muted)" onclick="clearBaseline();closeBaselineModal()">초기화</button>
+        <button class="btn btn-amber" style="flex:2" onclick="applyBaseline()">✓ 적용</button>
       </div>
     </div>
   </div>
@@ -710,13 +734,27 @@ function updateSidebar() {
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
-function renderDashboard() { updateBaselineBanner(); renderKpi(); renderDayList(); renderMainChart(); renderDailyBar(); renderMonthlyBar('monthlyBar'); updateSidebar(); }
+function renderDashboard() { updateBaselineBanner(); renderKpi(); renderDayList(); renderMainChart(); renderDailyBar(); renderMonthlyBar('monthlyBar'); renderWeeklyTable(); updateSidebar(); }
 
 // ── BASELINE (기준시점) ───────────────────────────────────────────────────────
 function openBaselineModal(){
   const inp=document.getElementById('baselineInput');
   inp.value=baselineDate||todayStr();
   updateBaselinePreview();
+  // 날짜 목록 렌더링
+  const list=document.getElementById('baselineDateList');
+  if(list){
+    if(!entries.length){ list.innerHTML='<div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;padding:10px">기록이 없습니다</div>'; }
+    else {
+      list.innerHTML=[...entries].reverse().map(e=>{
+        const isCurrent=e.date===baselineDate;
+        return `<div onclick="document.getElementById('baselineInput').value='${e.date}';updateBaselinePreview()" style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:4px;cursor:pointer;border:1px solid ${isCurrent?'rgba(255,187,0,.4)':'rgba(26,48,72,.6)'};background:${isCurrent?'rgba(255,187,0,.08)':'var(--bg3)'};transition:all .1s" onmouseover="this.style.borderColor='rgba(255,187,0,.3)'" onmouseout="this.style.borderColor='${isCurrent?'rgba(255,187,0,.4)':'rgba(26,48,72,.6)'}'">
+          <span style="font-family:var(--mono);font-size:10px;color:${isCurrent?'var(--amber)':'#c0d8e8'}">${e.date} ${isCurrent?'← 현재 기준':''}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:#fff">$${fmt2(e.balance)}</span>
+        </div>`;
+      }).join('');
+    }
+  }
   document.getElementById('baselineModal').classList.add('open');
 }
 function closeBaselineModal(){ document.getElementById('baselineModal').classList.remove('open'); }
@@ -750,27 +788,65 @@ function updateBaselineBanner(){
 }
 
 function renderKpi() {
-  const last=entries[entries.length-1], base=getBase(), today=todayStr();
+  const last=entries[entries.length-1], base=getBase();
   const setK=(vid,val,cls,sid,stxt,scls)=>{
     const el=document.getElementById(vid); if(!el) return;
     el.textContent=val; el.className='kpi-main '+cls;
     const s=document.getElementById(sid); if(s){s.textContent=stxt; if(scls) s.className='val '+scls;}
   };
+
+  // TOTAL ASSETS
   setK('k-bal', last?'$'+fmt2(last.balance):'—', 'col-white', 'k-bal-date', last?last.date:'기록없음');
-  if(last&&base){ const tp=last.balance-base, pct=tp/base*100; setK('k-pnl',fmtP(tp),tp>=0?'col-green':'col-red','k-pnl-pct',(pct>=0?'+':'')+pct.toFixed(2)+'%',tp>=0?'g':'r'); document.getElementById('k-pnl-card').className='kpi-card '+(tp>=0?'kc-green':'kc-red'); document.getElementById('k-pnl-arrow').textContent=tp>=0?'📈':'📉'; }
-  else setK('k-pnl','—','col-white','k-pnl-pct','기록없음');
-  const te=entries.find(e=>e.date===today);
-  if(te){ const ti=entries.findIndex(e=>e.date===today), tp=dayPnl(ti); setK('k-today',fmtP(tp),tp>=0?'col-green':'col-red','k-today-bal','$'+fmt2(te.balance)); }
-  else setK('k-today','—','col-white','k-today-bal','오늘 기록없음');
-  if(entries.length>=2){ const dp=dayPnl(entries.length-1), pv=entries[entries.length-2]; setK('k-yest',fmtP(dp),dp>=0?'col-green':'col-red','k-yest-sub','$'+fmt2(pv.balance)); }
-  else setK('k-yest','—','col-white','k-yest-sub','이전 기록없음');
-  const now=new Date(), ws=new Date(now); ws.setDate(now.getDate()-now.getDay());
-  const wsStr=(()=>{ const d=new Date(ws); d.setMinutes(d.getMinutes()+d.getTimezoneOffset()+540); return d.toISOString().split('T')[0]; })(), we=entries.filter(e=>e.date>=wsStr);
-  if(we.length){ const wr=entries.filter(e=>e.date<wsStr), rb=wr.length?wr[wr.length-1].balance:we[0].balance, wp=we[we.length-1].balance-rb; setK('k-week',fmtP(wp),wp>=0?'col-green':'col-red','k-week-sub',we.length+'일'); }
-  else setK('k-week','—','col-white','k-week-sub','이번주 기록없음');
-  const ms=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`, me=entries.filter(e=>e.date>=ms);
-  if(me.length){ const mr=entries.filter(e=>e.date<ms), rb=mr.length?mr[mr.length-1].balance:me[0].balance, mp=me[me.length-1].balance-rb; setK('k-month',fmtP(mp),mp>=0?'col-green':'col-red','k-month-sub',me.length+'일'); }
-  else setK('k-month','—','col-white','k-month-sub','이번달 기록없음');
+
+  // 기준 대비 PnL (baselineDate 기준)
+  if(last&&base){
+    const tp=last.balance-base, pct=tp/base*100;
+    setK('k-pnl',fmtP(tp),tp>=0?'col-green':'col-red','k-pnl-pct',(pct>=0?'+':'')+pct.toFixed(2)+'%',tp>=0?'g':'r');
+    document.getElementById('k-pnl-card').className='kpi-card '+(tp>=0?'kc-green':'kc-red');
+    document.getElementById('k-pnl-arrow').textContent=tp>=0?'📈':'📉';
+  } else setK('k-pnl','—','col-white','k-pnl-pct','기록없음');
+
+  // 전일 대비
+  if(entries.length>=2){
+    const dp=entries[entries.length-1].balance-entries[entries.length-2].balance;
+    const pv=entries[entries.length-2];
+    setK('k-yest',fmtP(dp),dp>=0?'col-green':'col-red','k-yest-sub','$'+fmt2(pv.balance));
+  } else setK('k-yest','—','col-white','k-yest-sub','이전 기록없음');
+
+  // 최근 7일 PNL (고정 7일 — 요일 무관)
+  const kstNow=new Date(); kstNow.setMinutes(kstNow.getMinutes()+kstNow.getTimezoneOffset()+540);
+  const d7=new Date(kstNow); d7.setDate(kstNow.getDate()-7);
+  const d7str=d7.toISOString().split('T')[0];
+  const w7=entries.filter(e=>e.date>d7str);
+  if(w7.length){
+    const refE=entries.filter(e=>e.date<=d7str);
+    const rb=refE.length?refE[refE.length-1].balance:w7[0].balance;
+    const wp=w7[w7.length-1].balance-rb;
+    setK('k-week',fmtP(wp),wp>=0?'col-green':'col-red','k-week-sub',d7str.slice(5)+'~오늘');
+  } else setK('k-week','—','col-white','k-week-sub','7일내 기록없음');
+
+  // 이번달 PNL
+  const ms=kstNow.getFullYear()+'-'+String(kstNow.getMonth()+1).padStart(2,'0')+'-01';
+  const me=entries.filter(e=>e.date>=ms);
+  if(me.length){
+    const mr=entries.filter(e=>e.date<ms), rb=mr.length?mr[mr.length-1].balance:me[0].balance;
+    const mp=me[me.length-1].balance-rb;
+    setK('k-month',fmtP(mp),mp>=0?'col-green':'col-red','k-month-sub',me.length+'일');
+  } else setK('k-month','—','col-white','k-month-sub','이번달 기록없음');
+
+  // 기준시점 카드
+  const bv=document.getElementById('k-baseline-val');
+  const bb=document.getElementById('k-baseline-bal');
+  if(bv){
+    if(baselineDate){
+      bv.textContent=baselineDate; bv.style.fontSize='18px'; bv.style.color='var(--amber)';
+      const bl=entries.find(e=>e.date===baselineDate);
+      if(bb) bb.textContent=bl?'$'+fmt2(bl.balance):'—';
+    } else {
+      bv.textContent='미설정'; bv.style.fontSize='20px'; bv.style.color='var(--muted)';
+      if(bb) bb.textContent='첫 번째 기록 기준';
+    }
+  }
 }
 
 function renderDayList() {
@@ -814,6 +890,52 @@ function renderMonthlyBar(cid){
   const months=Object.keys(byM).sort();
   const vals=months.map(m=>{const idxs=byM[m],f=idxs[0],l=idxs[idxs.length-1],ref=f>0?entries[f-1].balance:entries[f].balance;return+(entries[l].balance-ref).toFixed(2);});
   mkChart(cid,{type:'bar',data:{labels:months,datasets:[{label:'월별PnL',data:vals,backgroundColor:vals.map(v=>v>=0?'rgba(0,255,136,.5)':'rgba(255,51,102,.5)'),borderColor:vals.map(v=>v>=0?'var(--green)':'var(--red)'),borderWidth:1,borderRadius:4}]},options:cCfg()});
+}
+
+// ── WEEKLY TABLE ─────────────────────────────────────────────────────────────
+function renderWeeklyTable(){
+  const el=document.getElementById('weeklyTable'); if(!el||!entries.length) return;
+  // 최근 8주 계산 (월요일 기준)
+  const kstNow=new Date(); kstNow.setMinutes(kstNow.getMinutes()+kstNow.getTimezoneOffset()+540);
+  const weeks=[];
+  for(let w=0;w<8;w++){
+    const end=new Date(kstNow); end.setDate(kstNow.getDate()-w*7);
+    const start=new Date(end); start.setDate(end.getDate()-6);
+    const es=start.toISOString().split('T')[0];
+    const ee=end.toISOString().split('T')[0];
+    const we=entries.filter(e=>e.date>=es&&e.date<=ee);
+    const refE=entries.filter(e=>e.date<es);
+    const refB=refE.length?refE[refE.length-1].balance:(we.length?we[0].balance:0);
+    const lastB=we.length?we[we.length-1].balance:null;
+    const pnl=lastB!==null?lastB-refB:null;
+    const pct=refB>0&&pnl!==null?(pnl/refB*100):null;
+    weeks.push({label:es.slice(5)+'~'+ee.slice(5), pnl, pct, days:we.length, lastB});
+  }
+  weeks.reverse();
+  const rows=weeks.map((w,i)=>{
+    const isLast=i===weeks.length-1;
+    const pnlStr=w.pnl!==null?fmtP(w.pnl):'—';
+    const pctStr=w.pct!==null?(w.pct>=0?'+':'')+w.pct.toFixed(2)+'%':'—';
+    const col=w.pnl===null?'var(--muted)':w.pnl>=0?'var(--green)':'var(--red)';
+    const bg=isLast?'rgba(56,189,248,.04)':'';
+    return `<tr style="border-bottom:1px solid rgba(26,48,72,.5);background:${bg}">
+      <td style="padding:8px 12px;font-family:var(--mono);font-size:10px;color:${isLast?'var(--blue)':'#a0c4d8'}">${w.label}${isLast?' (이번주)':''}</td>
+      <td style="padding:8px 12px;font-family:var(--mono);font-size:10px;color:#fff;text-align:right">${w.lastB!==null?'$'+fmt2(w.lastB):'—'}</td>
+      <td style="padding:8px 12px;font-family:var(--mono);font-size:11px;font-weight:600;color:${col};text-align:right">${pnlStr}</td>
+      <td style="padding:8px 12px;font-family:var(--mono);font-size:10px;color:${col};text-align:right">${pctStr}</td>
+      <td style="padding:8px 12px;font-family:var(--mono);font-size:9px;color:var(--muted);text-align:right">${w.days}일</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse">
+    <thead><tr style="border-bottom:1px solid var(--bd2)">
+      <th style="padding:6px 12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.45);text-align:left;font-weight:600">기간</th>
+      <th style="padding:6px 12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.45);text-align:right;font-weight:600">잔고</th>
+      <th style="padding:6px 12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.45);text-align:right;font-weight:600">PnL</th>
+      <th style="padding:6px 12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.45);text-align:right;font-weight:600">수익률</th>
+      <th style="padding:6px 12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.45);text-align:right;font-weight:600">기록</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 // ── MANUAL MODAL ─────────────────────────────────────────────────────────────
