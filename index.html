@@ -853,14 +853,18 @@ function clearCoinexKeys(){coinexApi={};localStorage.removeItem('ft_coinex');doc
 
 async function fetchCoinexBalance(showInPage){
   const resEl=document.getElementById('apiResult');
-  const base=proxyUrl||'https://api.coinex.com';
 
-  // 각 계좌 개별 호출 — 실패해도 0으로 처리하고 계속 진행
+  // Worker 경유 시 ?target=coinex 필수, 직접 호출 시 api.coinex.com
   async function callApi(path){
     try{
       const ts=Date.now().toString();
       const hex=await hmacHex(coinexApi.secret, 'GET'+path+''+ts);
-      const r=await fetch(base+path,{
+      // Worker 사용 시: Worker URL + path + ?target=coinex
+      // 직접 호출 시:   https://api.coinex.com + path
+      const url = proxyUrl
+        ? proxyUrl + path + '?target=coinex'
+        : 'https://api.coinex.com' + path;
+      const r=await fetch(url,{
         headers:{'X-COINEX-KEY':coinexApi.key,'X-COINEX-SIGN':hex,'X-COINEX-TIMESTAMP':ts,'Content-Type':'application/json'},
         signal:AbortSignal.timeout(8000)
       });
