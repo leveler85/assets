@@ -890,24 +890,24 @@ async function fetchCoinexBalance(showInPage){
   const financialRes = await callApi('/v2/assets/financial/balance');
 
   // SPOT: available + frozen
+  // data가 null/빈값이면 빈 배열 반환 (CoinEx는 잔고 없으면 null 반환)
+  const toItems = d => Array.isArray(d) ? d : (d && typeof d==='object' ? [d] : []);
+
   let spotTotal=0, spotOk=spotRes.code===0;
   if(spotOk){
-    const items=Array.isArray(spotRes.data)?spotRes.data:(spotRes.data?[spotRes.data]:[]);
-    items.forEach(it=>{ spotTotal+=parseFloat(it.available||0)+parseFloat(it.frozen||0); });
+    toItems(spotRes.data).forEach(it=>{ spotTotal+=parseFloat(it.available||0)+parseFloat(it.frozen||0); });
   }
 
   // FUTURES: available + frozen + margin
   let futuresTotal=0, futuresOk=futuresRes.code===0;
   if(futuresOk){
-    const items=Array.isArray(futuresRes.data)?futuresRes.data:(futuresRes.data?[futuresRes.data]:[]);
-    items.forEach(it=>{ futuresTotal+=parseFloat(it.available||0)+parseFloat(it.frozen||0)+parseFloat(it.margin||0); });
+    toItems(futuresRes.data).forEach(it=>{ futuresTotal+=parseFloat(it.available||0)+parseFloat(it.frozen||0)+parseFloat(it.margin||0); });
   }
 
   // EARN (financial): amount
   let financialTotal=0, financialOk=financialRes.code===0;
   if(financialOk){
-    const items=Array.isArray(financialRes.data)?financialRes.data:(financialRes.data?[financialRes.data]:[]);
-    items.forEach(it=>{ financialTotal+=parseFloat(it.amount||0); });
+    toItems(financialRes.data).forEach(it=>{ financialTotal+=parseFloat(it.amount||0); });
   }
 
   // 3개 모두 실패하면 에러 처리
