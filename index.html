@@ -1020,10 +1020,16 @@ async function fetchCoinexBalance(showInPage){
     toItems(spotRes.data).forEach(it=>{ spotTotal+=parseFloat(it.available||0)+parseFloat(it.frozen||0); });
   }
 
-  // FUTURES: available + frozen + margin
+  // FUTURES: available + frozen + margin + unrealized_pnl
+  // unrealized_pnl은 음수일 수 있음 — 반드시 포함해야 실제 평가 잔고
   let futuresTotal=0, futuresOk=futuresRes.code===0;
   if(futuresOk){
-    toItems(futuresRes.data).forEach(it=>{ futuresTotal+=parseFloat(it.available||0)+parseFloat(it.frozen||0)+parseFloat(it.margin||0); });
+    toItems(futuresRes.data).forEach(it=>{
+      futuresTotal += parseFloat(it.available||0)
+                    + parseFloat(it.frozen||0)
+                    + parseFloat(it.margin||0)
+                    + parseFloat(it.unrealized_pnl||0);  // ← 핵심: upnl 포함
+    });
   }
 
   // EARN (financial): amount
@@ -1053,7 +1059,7 @@ async function fetchCoinexBalance(showInPage){
       `<div class="big">$${fmt2(total)}</div>`+
       `<div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">`+
         badge(spotOk,     spotTotal,     'SPOT',    '56,189,248')+
-        badge(futuresOk,  futuresTotal,  'FUTURES', '0,255,136')+
+        badge(futuresOk,  futuresTotal,  'FUTURES (upnl포함)', '0,255,136')+
         badge(financialOk,financialTotal,'EARN',    '168,85,247')+
       `</div>`+
       `<div style="color:var(--muted);font-size:9px;margin-top:8px">${todayStr()} KST 기준 저장</div>`;
