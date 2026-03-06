@@ -855,77 +855,89 @@ async function fetchCoinexBalance(showInPage){
   const resEl=document.getElementById('apiResult');
   const base=proxyUrl||'https://api.coinex.com';
 
-  // 단일 엔드포인트 호출 헬퍼
+  // 각 계좌 개별 호출 — 실패해도 0으로 처리하고 계속 진행
   async function callApi(path){
-    const ts=Date.now().toString();
-    const hex=await hmacHex(coinexApi.secret, 'GET'+path+''+ts);
-    const r=await fetch(base+path,{headers:{'X-COINEX-KEY':coinexApi.key,'X-COINEX-SIGN':hex,'X-COINEX-TIMESTAMP':ts,'Content-Type':'application/json'}});
-    return r.json();
+    try{
+      const ts=Date.now().toString();
+      const hex=await hmacHex(coinexApi.secret, 'GET'+path+''+ts);
+      const r=await fetch(base+path,{
+        headers:{'X-COINEX-KEY':coinexApi.key,'X-COINEX-SIGN':hex,'X-COINEX-TIMESTAMP':ts,'Content-Type':'application/json'},
+        signal:AbortSignal.timeout(8000)
+      });
+      const data=await r.json();
+      return data;
+    }catch(e){
+      return {code:-1, data:[], _error: e.message};
+    }
   }
 
-  try{
-    // 3개 계좌 병렬 호출
-    const [spotRes, futuresRes, financialRes] = await Promise.all([
-      callApi('/v2/assets/spot/balance'),
-      callApi('/v2/assets/futures/balance'),
-      callApi('/v2/assets/financial/balance'),
-    ]);
-
-    // SPOT: available + frozen (USDT 환산은 각 코인 합산이 이상적이나
-    //       여기서는 USDT 코인만 합산 — 다른 코인은 CoinEx 내부 USDT 환산값 없음)
-    // → 실용적으로: available+frozen 모두 합산 (USDT 기준 계좌만 사용하는 경우)
-    let spotTotal=0;
-    if(spotRes.code===0){
-      const items=Array.isArray(spotRes.data)?spotRes.data:[spotRes.data];
-      items.forEach(it=>{ spotTotal+=parseFloat(it.available||0)+parseFloat(it.frozen||0); });
-    }
-
-    // FUTURES: available + frozen + margin
-    let futuresTotal=0;
-    if(futuresRes.code===0){
-      const items=Array.isArray(futuresRes.data)?futuresRes.data:[futuresRes.data];
-      items.forEach(it=>{ futuresTotal+=parseFloat(it.available||0)+parseFloat(it.frozen||0)+parseFloat(it.margin||0); });
-    }
-
-    // FINANCIAL(EARN): amount
-    let financialTotal=0;
-    if(financialRes.code===0){
-      const items=Array.isArray(financialRes.data)?financialRes.data:[financialRes.data];
-      items.forEach(it=>{ financialTotal+=parseFloat(it.amount||0); });
-    }
-
-    const total=+(spotTotal+futuresTotal+financialTotal).toFixed(2);
-
-    if(showInPage&&resEl){
-      resEl.style.display='block';
-      resEl.innerHTML=
-        `<div style="color:var(--muted);font-size:9px;letter-spacing:2px;margin-bottom:6px">TOTAL ASSETS (SPOT + FUTURES + EARN)</div>`+
-        `<div class="big">$${fmt2(total)}</div>`+
-        `<div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center">`+
-          `<div style="background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.2);border-radius:4px;padding:8px 4px">`+
-            `<div style="font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:3px">SPOT</div>`+
-            `<div style="font-size:13px;font-weight:600;color:var(--blue)">$${fmt2(spotTotal)}</div></div>`+
-          `<div style="background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);border-radius:4px;padding:8px 4px">`+
-            `<div style="font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:3px">FUTURES</div>`+
-            `<div style="font-size:13px;font-weight:600;color:var(--green)">$${fmt2(futuresTotal)}</div></div>`+
-          `<div style="background:rgba(168,85,247,.07);border:1px solid rgba(168,85,247,.2);border-radius:4px;padding:8px 4px">`+
-            `<div style="font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:3px">EARN</div>`+
-            `<div style="font-size:13px;font-weight:600;color:var(--purple)">$${fmt2(financialTotal)}</div></div>`+
-        `</div>`+
-        `<div style="color:var(--muted);font-size:9px;margin-top:8px">${todayStr()} KST 기준 저장</div>`;
-    }
-
-    const today=todayStr(), idx=entries.findIndex(e=>e.date===today);
-    if(idx>=0){entries[idx].balance=total;entries[idx].note='API';}
-    else{entries.push({date:today,balance:total,note:'API'});}
-    save(); renderDashboard();
-    toast('동기화 완료 SPOT $'+fmt2(spotTotal)+' · FUT $'+fmt2(futuresTotal)+' · EARN $'+fmt2(financialTotal),'ok');
-
-  }catch(e){
-    const msg=proxyUrl?'Worker 호출 실패. URL 확인 필요.':'CORS 오류 — 설정에서 Worker URL을 입력하세요.';
-    if(showInPage&&resEl){resEl.style.display='block';resEl.innerHTML=`<span style="color:var(--muted);font-size:9px;line-height:1.8">${msg}</span>`;}
-    toast(msg,'err');
+  if(!coinexApi.key||!coinexApi.secret){
+    toast('API 키가 없습니다. 설정에서 입력하세요.','err'); return;
   }
+
+  if(showInPage&&resEl){
+    resEl.style.display='block';
+    resEl.innerHTML='<span style="color:var(--muted);font-size:10px">잔고 조회 중... (SPOT · FUTURES · EARN)</span>';
+  }
+
+  // 3개 순차 호출 (Worker 부하 분산 — 동시 요청 시 rate limit 방지)
+  const spotRes      = await callApi('/v2/assets/spot/balance');
+  const futuresRes   = await callApi('/v2/assets/futures/balance');
+  const financialRes = await callApi('/v2/assets/financial/balance');
+
+  // SPOT: available + frozen
+  let spotTotal=0, spotOk=spotRes.code===0;
+  if(spotOk){
+    const items=Array.isArray(spotRes.data)?spotRes.data:(spotRes.data?[spotRes.data]:[]);
+    items.forEach(it=>{ spotTotal+=parseFloat(it.available||0)+parseFloat(it.frozen||0); });
+  }
+
+  // FUTURES: available + frozen + margin
+  let futuresTotal=0, futuresOk=futuresRes.code===0;
+  if(futuresOk){
+    const items=Array.isArray(futuresRes.data)?futuresRes.data:(futuresRes.data?[futuresRes.data]:[]);
+    items.forEach(it=>{ futuresTotal+=parseFloat(it.available||0)+parseFloat(it.frozen||0)+parseFloat(it.margin||0); });
+  }
+
+  // EARN (financial): amount
+  let financialTotal=0, financialOk=financialRes.code===0;
+  if(financialOk){
+    const items=Array.isArray(financialRes.data)?financialRes.data:(financialRes.data?[financialRes.data]:[]);
+    items.forEach(it=>{ financialTotal+=parseFloat(it.amount||0); });
+  }
+
+  // 3개 모두 실패하면 에러 처리
+  if(!spotOk&&!futuresOk&&!financialOk){
+    const errMsg = spotRes._error||futuresRes._error||'API 응답 없음';
+    const msg=proxyUrl?`Worker 호출 실패 (${errMsg}). URL 확인 필요.`:'CORS 오류 — 설정에서 Worker URL을 입력하세요.';
+    if(showInPage&&resEl){resEl.innerHTML=`<span style="color:var(--red);font-size:10px">✕ ${msg}</span>`;}
+    toast(msg,'err'); return;
+  }
+
+  const total=+(spotTotal+futuresTotal+financialTotal).toFixed(2);
+
+  // 결과 표시
+  if(showInPage&&resEl){
+    const badge=(ok,val,label,color)=>
+      `<div style="background:rgba(${color},.07);border:1px solid rgba(${color},.25);border-radius:4px;padding:8px 4px;text-align:center">`+
+      `<div style="font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:3px">${label} ${ok?'✓':'✕'}</div>`+
+      `<div style="font-size:13px;font-weight:600;color:rgb(${color})">${ok?'$'+fmt2(val):'오류'}</div></div>`;
+    resEl.innerHTML=
+      `<div style="color:var(--muted);font-size:9px;letter-spacing:2px;margin-bottom:6px">TOTAL ASSETS</div>`+
+      `<div class="big">$${fmt2(total)}</div>`+
+      `<div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">`+
+        badge(spotOk,     spotTotal,     'SPOT',    '56,189,248')+
+        badge(futuresOk,  futuresTotal,  'FUTURES', '0,255,136')+
+        badge(financialOk,financialTotal,'EARN',    '168,85,247')+
+      `</div>`+
+      `<div style="color:var(--muted);font-size:9px;margin-top:8px">${todayStr()} KST 기준 저장</div>`;
+  }
+
+  const today=todayStr(), idx=entries.findIndex(e=>e.date===today);
+  if(idx>=0){entries[idx].balance=total;entries[idx].note='API';}
+  else{entries.push({date:today,balance:total,note:'API'});}
+  save(); renderDashboard();
+  toast('동기화 완료 · SPOT $'+fmt2(spotTotal)+' / FUT $'+fmt2(futuresTotal)+' / EARN $'+fmt2(financialTotal),'ok');
 }
 
 // ── HODL ─────────────────────────────────────────────────────────────────────
