@@ -241,6 +241,17 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 </head>
 <body>
 
+<!-- ── 커스텀 Confirm 모달 ── -->
+<div id="confirmModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;align-items:center;justify-content:center">
+  <div style="background:#0a1520;border:1px solid #234460;border-radius:10px;padding:28px 28px 22px;width:320px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.6)">
+    <div id="confirmMsg" style="font-family:'Noto Sans KR',sans-serif;font-size:14px;color:#fff;margin-bottom:22px;line-height:1.6"></div>
+    <div style="display:flex;gap:10px">
+      <button id="confirmNo"  style="flex:1;padding:10px;border-radius:4px;border:1px solid #234460;background:transparent;color:#7eaacc;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer">취소</button>
+      <button id="confirmYes" style="flex:1;padding:10px;border-radius:4px;border:none;background:#ff3366;color:#fff;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;cursor:pointer">삭제</button>
+    </div>
+  </div>
+</div>
+
 <div id="lockScreen">
   <div class="lock-box">
     <div class="lock-icon">🔐</div>
@@ -641,6 +652,19 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
   }
   setTimeout(()=>{ const el=document.getElementById('lockPw'); if(el) el.focus(); },100);
 })();
+// ── 커스텀 Confirm ───────────────────────────────────────────────────────────
+function confirmModal(msg, yesCb, yesTxt) {
+  const modal = document.getElementById('confirmModal');
+  document.getElementById('confirmMsg').textContent = msg;
+  if(yesTxt) document.getElementById('confirmYes').textContent = yesTxt;
+  modal.style.display = 'flex';
+  const yes = document.getElementById('confirmYes');
+  const no  = document.getElementById('confirmNo');
+  const close = () => { modal.style.display = 'none'; yes.onclick = null; no.onclick = null; };
+  yes.onclick = () => { close(); yesCb(); };
+  no.onclick  = () => close();
+}
+
 function checkLock(){
   const stored=localStorage.getItem('ft_pw')||'1234';
   const val=document.getElementById('lockPw').value;
@@ -903,10 +927,11 @@ function cancelSelect(){
 function deleteSelected(){
   const checked=document.querySelectorAll('.dt-cb:checked');
   if(!checked.length) return;
-  if(!confirm(checked.length+'개 기록을 삭제하시겠습니까?')) return;
-  const dates=Array.from(checked).map(cb=>cb.dataset.date);
-  entries=entries.filter(e=>!dates.includes(e.date));
-  save(); renderDashboard(); toast(dates.length+'개 기록 삭제 완료','info');
+  confirmModal(checked.length+'개 기록을 삭제하시겠습니까?', ()=>{
+    const dates=Array.from(document.querySelectorAll('.dt-cb:checked')).map(cb=>cb.dataset.date);
+    entries=entries.filter(e=>!dates.includes(e.date));
+    save(); renderDashboard(); toast(dates.length+'개 기록 삭제 완료','info');
+  });
 }
 
 // ── CHARTS ───────────────────────────────────────────────────────────────────
@@ -959,7 +984,7 @@ function submitManual(){
   if(idx>=0){entries[idx]={date,balance:amt,note};toast('기록 업데이트','info');}else{entries.push({date,balance:amt,note});toast('잔고 저장 완료','ok');}
   save(); renderDashboard(); closeManual();
 }
-function delEntry(date){if(!confirm(date+' 기록을 삭제하시겠습니까?'))return; entries=entries.filter(e=>e.date!==date); save(); renderDashboard(); toast('삭제 완료','info');}
+function delEntry(date){ confirmModal(date+' 기록을 삭제하시겠습니까?', ()=>{ entries=entries.filter(e=>e.date!==date); save(); renderDashboard(); toast('삭제 완료','info'); }); }
 
 // ── COINEX API ────────────────────────────────────────────────────────────────
 async function triggerCoinexSync(){
@@ -1432,7 +1457,7 @@ function saveAllHodlKeys(){
   });
   saveHodlK(); renderSettings(); toast('거래소 API 키 저장 완료','ok');
 }
-function clearAllHodlKeys(){ if(!confirm('모든 존버 거래소 API 키를 초기화하시겠습니까?'))return; hodlKeys={}; saveHodlK(); renderSettings(); toast('API 키 전체 초기화','info'); }
+function clearAllHodlKeys(){ confirmModal('모든 존버 거래소 API 키를 초기화하시겠습니까?', ()=>{ hodlKeys={}; saveHodlK(); renderSettings(); toast('API 키 전체 초기화','info'); }, '초기화'); }
 
 // Worker URL save + test
 function saveProxyUrl(){ proxyUrl=document.getElementById('proxyInput').value.trim().replace(/\/$/,''); saveProxy(); workerVer=''; localStorage.removeItem('ft_workerver'); renderSettings(); toast(proxyUrl?'Worker URL 저장됨 — 연결 테스트를 눌러 버전을 확인하세요':'Worker URL 초기화','info'); }
@@ -1499,7 +1524,7 @@ function copyWorkerCode(){ const code=document.getElementById('workerCode').text
 // ── EXPORT / IMPORT / CLEAR ──────────────────────────────────────────────────
 function exportData(){ const b=new Blob([JSON.stringify({entries,hodlData,exportedAt:new Date().toISOString(),v:4},null,2)],{type:'application/json'}); const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`futures-tracker-${todayStr()}.json`;a.click(); toast('내보내기 완료','ok'); }
 function importData(ev){ const f=ev.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=e=>{try{const d=JSON.parse(e.target.result);if(Array.isArray(d.entries))entries=d.entries;if(d.hodlData)hodlData=d.hodlData;save();saveHodl();renderDashboard();toast(entries.length+'개 기록 로드','ok');}catch{toast('파일 형식 오류','err');}}; r.readAsText(f); }
-function clearAll(){ if(!confirm('모든 데이터를 삭제하시겠습니까?\n되돌릴 수 없습니다.'))return; entries=[];hodlData={};save();saveHodl();renderDashboard();toast('전체 삭제','info'); }
+function clearAll(){ confirmModal('모든 데이터를 삭제하시겠습니까? 되돌릴 수 없습니다.', ()=>{ entries=[];hodlData={};save();saveHodl();renderDashboard();toast('전체 삭제','info'); }); }
 
 // ── TOAST ────────────────────────────────────────────────────────────────────
 function toast(msg,type='info'){ const ic={ok:'✓',err:'✕',info:'ℹ'}[type]||'ℹ'; const el=document.createElement('div'); el.className=`toast-item ${type}`; el.innerHTML=`<span>${ic}</span><span>${msg}</span>`; document.getElementById('toastStack').appendChild(el); setTimeout(()=>el.remove(),3500); }
