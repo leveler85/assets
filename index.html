@@ -1511,29 +1511,32 @@ seed();
 // ── KST 자정 자동 동기화 ────────────────────────────────────────────────────
 // 페이지가 열려 있는 동안 KST 00:00이 되면 자동으로 CoinEx API 동기화 실행
 function scheduleAutoSync() {
-  // KST 자정까지 남은 ms 계산
-  // KST = UTC+9 고정. 현재 UTC ms 기준으로 순수하게 계산
+  // KST(UTC+9) 기준 다음 자정까지 남은 ms
+  // 예: KST 23:40 → 남은 시간 = 20분 = 1200초
   function msUntilKSTMidnight() {
-    const nowUtcMs = Date.now();
-    const kstMs = nowUtcMs + 9*3600*1000;          // KST 현재 ms
-    const kstMidnightMs = Math.ceil(kstMs / 86400000) * 86400000; // 다음 KST 자정 ms
-    return kstMidnightMs - kstMs + 5000;            // +5초 여유
+    const nowMs = Date.now();                        // UTC 기준 현재 ms
+    const kstMs = nowMs + 9 * 3600 * 1000;          // KST 현재 ms (UTC+9)
+    const kstDayMs = kstMs % 86400000;               // 오늘 KST 00:00 이후 경과 ms
+    const remaining = 86400000 - kstDayMs;           // 다음 자정까지 남은 ms
+    return remaining;
   }
 
-  // 카운트다운 표시
+  // 카운트다운 표시 (1초마다 갱신)
   function updateCountdown() {
-    const diff = msUntilKSTMidnight() - 5000;       // 5초 여유 빼고 표시
-    const hh = String(Math.floor(diff/3600000)).padStart(2,'0');
-    const mm = String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
-    const ss = String(Math.floor((diff%60000)/1000)).padStart(2,'0');
+    const diff = msUntilKSTMidnight();
+    const totalSec = Math.floor(diff / 1000);
+    const hh = String(Math.floor(totalSec / 3600)).padStart(2,'0');
+    const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2,'0');
+    const ss = String(totalSec % 60).padStart(2,'0');
     const el = document.getElementById('autoSyncCountdown');
     if(el) el.textContent = hh+':'+mm+':'+ss;
   }
   updateCountdown();
   setInterval(updateCountdown, 1000);
 
-  const wait = msUntilKSTMidnight();
-  console.log(`[AutoSync] 다음 KST 자정까지 ${Math.round(wait/1000/60)}분`);
+  // 자정 +3초 후 실행 (정확히 00:00:03)
+  const wait = msUntilKSTMidnight() + 3000;
+  console.log(`[AutoSync] 다음 KST 자정까지 ${Math.round(msUntilKSTMidnight()/1000/60)}분`);
 
   setTimeout(async () => {
     if (coinexApi.key && coinexApi.secret) {
