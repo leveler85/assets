@@ -93,6 +93,10 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 .dt-body{max-height:340px;overflow-y:auto}
 .dt-row{display:grid;grid-template-columns:80px 1fr 100px 90px 28px;gap:8px;align-items:center;padding:8px 4px;border-bottom:1px solid rgba(18,32,53,.6);transition:background .1s}
 .dt-row:hover{background:rgba(0,255,136,.02)}.dt-row:last-child{border:none}
+.dt-row.selected{background:rgba(255,51,102,.06);border-color:rgba(255,51,102,.2)}
+.dt-check{width:14px;height:14px;accent-color:var(--red);cursor:pointer;flex-shrink:0}
+.dt-bulk-bar{display:none;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,51,102,.07);border:1px solid rgba(255,51,102,.2);border-radius:5px;margin-bottom:8px;font-family:var(--mono);font-size:10px;color:var(--red)}
+.dt-bulk-bar.show{display:flex}
 .dt-date{font-family:var(--mono);font-size:10px;color:#c0d8e8}
 .dt-bar-wrap{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
 .dt-bar{height:100%;border-radius:2px}
@@ -332,7 +336,13 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
         <div class="panel-title">일별 기록</div>
         <span style="font-family:var(--mono);font-size:8px;color:var(--muted)" id="entryCount">0일</span>
       </div>
-      <div class="dt-head"><span>날짜</span><span>추이</span><span style="text-align:right">잔고</span><span style="text-align:right">PnL</span><span></span></div>
+      <div class="dt-bulk-bar" id="dtBulkBar">
+        <input type="checkbox" id="dtSelectAll" class="dt-check" onchange="toggleSelectAll(this.checked)">
+        <span id="dtSelCount">0개 선택</span>
+        <button onclick="deleteSelected()" style="margin-left:auto;background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.3);color:var(--red);font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:3px;cursor:pointer">✕ 선택 삭제</button>
+        <button onclick="cancelSelect()" style="background:none;border:1px solid var(--bd2);color:var(--muted);font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:3px;cursor:pointer">취소</button>
+      </div>
+      <div class="dt-head" style="grid-template-columns:18px 80px 1fr 100px 90px 28px"><span></span><span>날짜</span><span>추이</span><span style="text-align:right">잔고</span><span style="text-align:right">PnL</span><span></span></div>
       <div class="dt-body" id="dayList"></div>
     </div>
   </div>
@@ -856,8 +866,55 @@ function renderDayList() {
   const maxB=Math.max(...entries.map(e=>e.balance));
   el.innerHTML=[...entries].reverse().map((e,ri)=>{
     const oi=entries.length-1-ri, dp=dayPnl(oi), bp=(e.balance/maxB*100).toFixed(1);
-    return `<div class="dt-row"><span class="dt-date">${e.date.slice(5)}</span><div class="dt-bar-wrap"><div class="dt-bar" style="width:${bp}%;background:${dp>=0?'var(--green)':'var(--red)'}"></div></div><span class="dt-bal">$${fmt2(e.balance)}</span><span class="dt-pnl" style="color:${dp>0?'var(--green)':dp<0?'var(--red)':'var(--muted)'}">${oi===0?'기준':fmtP(dp)}</span><button class="dt-del" onclick="delEntry('${e.date}')">✕</button></div>`;
+    return `<div class="dt-row" id="row-${e.date}" style="grid-template-columns:18px 80px 1fr 100px 90px 28px">
+      <input type="checkbox" class="dt-check dt-cb" data-date="${e.date}" onchange="onRowCheck()" style="margin:0">
+      <span class="dt-date">${e.date.slice(5)}</span>
+      <div class="dt-bar-wrap"><div class="dt-bar" style="width:${bp}%;background:${dp>=0?'var(--green)':'var(--red)'}"></div></div>
+      <span class="dt-bal">$${fmt2(e.balance)}</span>
+      <span class="dt-pnl" style="color:${dp>0?'var(--green)':dp<0?'var(--red)':'var(--muted)'}">${oi===0?'기준':fmtP(dp)}</span>
+      <button class="dt-del" onclick="delEntry('${e.date}')">✕</button>
+    </div>`;
   }).join('');
+  // 다중선택 바 초기화
+  document.getElementById('dtBulkBar').classList.remove('show');
+  document.getElementById('dtSelectAll').checked=false;
+}
+
+function onRowCheck(){
+  const cbs=document.querySelectorAll('.dt-cb');
+  const checked=document.querySelectorAll('.dt-cb:checked');
+  const bar=document.getElementById('dtBulkBar');
+  // 선택된 row 하이라이트
+  cbs.forEach(cb=>{ document.getElementById('row-'+cb.dataset.date)?.classList.toggle('selected',cb.checked); });
+  if(checked.length>0){
+    bar.classList.add('show');
+    document.getElementById('dtSelCount').textContent=checked.length+'개 선택';
+    document.getElementById('dtSelectAll').checked=(checked.length===cbs.length);
+  } else {
+    bar.classList.remove('show');
+    document.getElementById('dtSelectAll').checked=false;
+  }
+}
+
+function toggleSelectAll(checked){
+  document.querySelectorAll('.dt-cb').forEach(cb=>{ cb.checked=checked; });
+  onRowCheck();
+}
+
+function cancelSelect(){
+  document.querySelectorAll('.dt-cb').forEach(cb=>{ cb.checked=false; });
+  document.querySelectorAll('.dt-row').forEach(r=>r.classList.remove('selected'));
+  document.getElementById('dtBulkBar').classList.remove('show');
+  document.getElementById('dtSelectAll').checked=false;
+}
+
+function deleteSelected(){
+  const checked=document.querySelectorAll('.dt-cb:checked');
+  if(!checked.length) return;
+  if(!confirm(checked.length+'개 기록을 삭제하시겠습니까?')) return;
+  const dates=Array.from(checked).map(cb=>cb.dataset.date);
+  entries=entries.filter(e=>!dates.includes(e.date));
+  save(); renderDashboard(); toast(dates.length+'개 기록 삭제 완료','info');
 }
 
 // ── CHARTS ───────────────────────────────────────────────────────────────────
@@ -1454,23 +1511,18 @@ seed();
 // ── KST 자정 자동 동기화 ────────────────────────────────────────────────────
 // 페이지가 열려 있는 동안 KST 00:00이 되면 자동으로 CoinEx API 동기화 실행
 function scheduleAutoSync() {
-  const now = new Date();
-  // KST 현재 시각
-  const kstNow = new Date(now.getTime() + 9*3600*1000);
-  // 오늘 KST 자정 + 5초 (정확히 00:00:05에 실행)
-  const kstMidnight = new Date(kstNow);
-  kstMidnight.setHours(0, 0, 5, 0);
-  // 이미 지났으면 내일 자정으로
-  if (kstNow >= kstMidnight) kstMidnight.setDate(kstMidnight.getDate() + 1);
-  const msUntil = kstMidnight - kstNow;
+  // KST 자정까지 남은 ms 계산
+  // KST = UTC+9 고정. 현재 UTC ms 기준으로 순수하게 계산
+  function msUntilKSTMidnight() {
+    const nowUtcMs = Date.now();
+    const kstMs = nowUtcMs + 9*3600*1000;          // KST 현재 ms
+    const kstMidnightMs = Math.ceil(kstMs / 86400000) * 86400000; // 다음 KST 자정 ms
+    return kstMidnightMs - kstMs + 5000;            // +5초 여유
+  }
 
-  // 다음 자정까지 남은 시간 표시 (사이드바 footer에)
+  // 카운트다운 표시
   function updateCountdown() {
-    const n = new Date();
-    const kn = new Date(n.getTime() + 9*3600*1000);
-    const km = new Date(kn); km.setHours(0,0,5,0);
-    if(kn >= km) km.setDate(km.getDate()+1);
-    const diff = km - kn;
+    const diff = msUntilKSTMidnight() - 5000;       // 5초 여유 빼고 표시
     const hh = String(Math.floor(diff/3600000)).padStart(2,'0');
     const mm = String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
     const ss = String(Math.floor((diff%60000)/1000)).padStart(2,'0');
@@ -1480,7 +1532,8 @@ function scheduleAutoSync() {
   updateCountdown();
   setInterval(updateCountdown, 1000);
 
-  console.log(`[AutoSync] 다음 KST 자동 동기화까지 ${Math.round(msUntil/1000/60)}분`);
+  const wait = msUntilKSTMidnight();
+  console.log(`[AutoSync] 다음 KST 자정까지 ${Math.round(wait/1000/60)}분`);
 
   setTimeout(async () => {
     if (coinexApi.key && coinexApi.secret) {
@@ -1488,9 +1541,8 @@ function scheduleAutoSync() {
       await fetchCoinexBalance(false);
       toast('✓ 자정 자동 동기화 완료', 'ok');
     }
-    // 다음날 자정에 또 실행
     scheduleAutoSync();
-  }, msUntil);
+  }, wait);
 }
 
 scheduleAutoSync();
