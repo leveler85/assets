@@ -285,11 +285,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
     <div class="sbf-lbl">COINEX BALANCE</div>
     <div class="sbf-val" id="sfBal">$0</div>
     <div class="sbf-pnl" id="sfPnl">—</div>
-    <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)">
-      <div style="font-family:var(--mono);font-size:7px;letter-spacing:2px;color:var(--muted);margin-bottom:3px">⏰ 자정 자동동기화</div>
-      <div id="autoSyncCountdown" style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--blue);letter-spacing:2px">--:--:--</div>
-      <div style="font-family:var(--mono);font-size:7px;color:rgba(126,170,204,.4);margin-top:2px;letter-spacing:1px">로컬 00:00 기준</div>
-    </div>
+
   </div>
 </nav>
 
@@ -639,41 +635,26 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 (function initLock(){
   const session=sessionStorage.getItem('ft_unlocked');
   if(session==='1'){
-    const ls = document.getElementById('lockScreen');
-    const as = document.getElementById('appShell');
-    if(ls) ls.style.display='none';
-    if(as) as.style.display='grid';
+    document.getElementById('lockScreen').style.display='none';
+    document.getElementById('appShell').style.display='';
     return;
   }
   setTimeout(()=>{ const el=document.getElementById('lockPw'); if(el) el.focus(); },100);
 })();
 function checkLock(){
-  const stored=(localStorage.getItem('ft_pw')||'1234').trim();
-  const val=document.getElementById('lockPw').value.trim();
+  const stored=localStorage.getItem('ft_pw')||'1234';
+  const val=document.getElementById('lockPw').value;
   const errEl=document.getElementById('lockErr');
-  
   if(val===stored){
     sessionStorage.setItem('ft_unlocked','1');
-    // 잠금 화면 제거 및 메인 화면 표시
-    const ls = document.getElementById('lockScreen');
-    const as = document.getElementById('appShell');
-    if(ls) ls.style.display='none';
-    if(as) as.style.display='grid'; // .shell 클래스가 display: grid 이므로 grid로 설정
+    document.getElementById('lockScreen').style.display='none';
+    document.getElementById('appShell').style.display='';
     errEl.textContent='';
-    
-    // 화면 표시 후 초기화 작업
-    if(typeof renderDashboard === 'function') renderDashboard();
   } else {
     const inp=document.getElementById('lockPw');
-    if(inp) {
-      inp.classList.add('err'); 
-      inp.value='';
-      errEl.textContent='비밀번호가 틀렸습니다';
-      setTimeout(()=>{ 
-        inp.classList.remove('err'); 
-        inp.focus(); 
-      },400);
-    }
+    inp.classList.add('err'); inp.value='';
+    errEl.textContent='비밀번호가 틀렸습니다';
+    setTimeout(()=>{ inp.classList.remove('err'); inp.focus(); },400);
   }
 }
 function changePw(){
@@ -1525,49 +1506,14 @@ function toast(msg,type='info'){ const ic={ok:'✓',err:'✕',info:'ℹ'}[type]|
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){closeCalDetail();closeManual();closeHodlModal();} });
 
 // ── SEED ─────────────────────────────────────────────────────────────────────
-function seed(){ if(entries.length)return; const off=d=>{const n=new Date(new Date().getTime()+9*3600*1000);n.setUTCDate(n.getUTCDate()+d);return n.toISOString().split('T')[0];}; entries=[{date:off(-25),balance:10000,note:'시작'},{date:off(-22),balance:10420,note:''},{date:off(-19),balance:10180,note:''},{date:off(-17),balance:10850,note:'강세장'},{date:off(-14),balance:10640,note:''},{date:off(-11),balance:11280,note:'수익일'},{date:off(-9),balance:11050,note:''},{date:off(-7),balance:11600,note:''},{date:off(-5),balance:11380,note:''},{date:off(-3),balance:12100,note:''},{date:off(-2),balance:11870,note:''},{date:off(-1),balance:12050,note:''},{date:off(0),balance:12340,note:'오늘'}]; save(); }
 
-// seed() 자동 실행 제거됨 — 사용자가 명시적으로 호출할 때만 실행
-
-// ── 자정 자동 동기화 ────────────────────────────────────────────────────────
-// 페이지가 열려 있는 동안 로컬 00:00이 되면 자동으로 CoinEx API 동기화 실행
-// 오른쪽 상단 시계와 동일한 로컬 시간 기준으로 통일
-function scheduleAutoSync() {
-  // 카운트다운 표시 (1초마다 갱신) — 로컬 자정 기준
-  function updateCountdown() {
-    const now = new Date();
-    const midnight = new Date(now);
-    midnight.setHours(24, 0, 0, 0); // 다음 로컬 자정
-    const diff = midnight - now;
-    const totalSec = Math.floor(diff / 1000);
-    const hh = String(Math.floor(totalSec / 3600)).padStart(2,'0');
-    const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2,'0');
-    const ss = String(totalSec % 60).padStart(2,'0');
-    const el = document.getElementById('autoSyncCountdown');
-    if(el) el.textContent = hh+':'+mm+':'+ss;
-  }
-  updateCountdown();
-  setInterval(updateCountdown, 1000);
-
-  // 로컬 자정 +3초 후 실행 (상단 시계와 동일 기준)
-  const _now = new Date();
-  const _midnight = new Date(_now); _midnight.setHours(24, 0, 3, 0);
-  const wait = _midnight - _now;
-  console.log(`[AutoSync] 다음 자정까지 ${Math.round(wait/1000/60)}분 (로컬 시간 기준)`);
-
-  setTimeout(async () => {
-    if (coinexApi.key && coinexApi.secret) {
-      toast('⏰ 00:00 자동 동기화 실행 중...', 'info');
-      await fetchCoinexBalance(false);
-      toast('✓ 자정 자동 동기화 완료', 'ok');
-    }
-    scheduleAutoSync();
-  }, wait);
+// ── 상단 시계 (1초마다 갱신) ────────────────────────────────────────────────
+function updateClock() {
+  const el = document.getElementById('clockEl');
+  if(el) el.textContent = new Date().toLocaleTimeString('ko-KR', {hour12:false});
 }
-
-scheduleAutoSync();
-
-document.getElementById('clockEl').textContent=new Date().toLocaleTimeString('ko-KR',{hour12:false});
+updateClock();
+setInterval(updateClock, 1000);
 renderDashboard();
 </script>
 </body>
