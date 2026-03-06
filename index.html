@@ -357,11 +357,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
       <div style="position:relative;height:200px"><canvas id="monthlyBar"></canvas></div>
     </div>
   </div>
-  <!-- 주간 성과 테이블 -->
-  <div class="panel" style="margin-bottom:16px">
-    <div class="panel-head"><div class="panel-title">주간 성과</div><span style="font-family:var(--mono);font-size:8px;color:var(--muted)">최근 8주</span></div>
-    <div id="weeklyTable" style="overflow-x:auto"></div>
-  </div>
+
 </div>
 
 <!-- ── CALENDAR ── -->
@@ -744,7 +740,7 @@ function updateSidebar() {
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
-function renderDashboard() { updateBaselineBanner(); renderKpi(); renderDayList(); renderMainChart(); renderDailyBar(); renderMonthlyBar('monthlyBar'); renderWeeklyTable(); updateSidebar(); }
+function renderDashboard() { updateBaselineBanner(); renderKpi(); renderDayList(); renderMainChart(); renderDailyBar(); renderMonthlyBar('monthlyBar'); updateSidebar(); }
 
 // ── BASELINE (기준시점) ───────────────────────────────────────────────────────
 function openBaselineModal(){
@@ -947,56 +943,6 @@ function renderMonthlyBar(cid){
   const months=Object.keys(byM).sort();
   const vals=months.map(m=>{const idxs=byM[m],f=idxs[0],l=idxs[idxs.length-1],ref=f>0?entries[f-1].balance:entries[f].balance;return+(entries[l].balance-ref).toFixed(2);});
   mkChart(cid,{type:'bar',data:{labels:months,datasets:[{label:'월별PnL',data:vals,backgroundColor:vals.map(v=>v>=0?'rgba(0,255,136,.5)':'rgba(255,51,102,.5)'),borderColor:vals.map(v=>v>=0?'var(--green)':'var(--red)'),borderWidth:1,borderRadius:4}]},options:cCfg()});
-}
-
-// ── WEEKLY TABLE ─────────────────────────────────────────────────────────────
-function renderWeeklyTable(){
-  const el=document.getElementById('weeklyTable'); if(!el) return;
-  if(!entries.length){el.innerHTML='<div style="padding:20px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted)">기록이 없습니다</div>';return;}
-  // 날짜 오프셋 헬퍼 — todayStr() 기준으로 N일 전 날짜 반환
-  function offsetDate(base, days){
-    const d=new Date(base+'T00:00:00Z');
-    d.setUTCDate(d.getUTCDate()+days);
-    return d.toISOString().split('T')[0];
-  }
-  const today=todayStr();
-  const weeks=[];
-  for(let w=0;w<8;w++){
-    const ee=offsetDate(today, -w*7);
-    const es=offsetDate(today, -w*7-6);
-    const we=entries.filter(e=>e.date>=es&&e.date<=ee);
-    const refE=entries.filter(e=>e.date<es);
-    const refB=refE.length?refE[refE.length-1].balance:(we.length?we[0].balance:0);
-    const lastB=we.length?we[we.length-1].balance:null;
-    const pnl=lastB!==null?lastB-refB:null;
-    const pct=refB>0&&pnl!==null?(pnl/refB*100):null;
-    weeks.push({label:es.slice(5)+'~'+ee.slice(5), pnl, pct, days:we.length, lastB});
-  }
-  weeks.reverse();
-  const rows=weeks.map((w,i)=>{
-    const isLast=i===weeks.length-1;
-    const pnlStr=w.pnl!==null?fmtP(w.pnl):'—';
-    const pctStr=w.pct!==null?(w.pct>=0?'+':'')+w.pct.toFixed(2)+'%':'—';
-    const col=w.pnl===null?'var(--muted)':w.pnl>=0?'var(--green)':'var(--red)';
-    const bg=isLast?'rgba(56,189,248,.04)':'';
-    return `<tr style="border-bottom:1px solid rgba(26,48,72,.5);background:${bg}">
-      <td style="padding:8px 12px;font-family:var(--mono);font-size:10px;color:${isLast?'var(--blue)':'#a0c4d8'}">${w.label}${isLast?' (이번주)':''}</td>
-      <td style="padding:8px 12px;font-family:var(--mono);font-size:10px;color:#fff;text-align:right">${w.lastB!==null?'$'+fmt2(w.lastB):'—'}</td>
-      <td style="padding:8px 12px;font-family:var(--mono);font-size:11px;font-weight:600;color:${col};text-align:right">${pnlStr}</td>
-      <td style="padding:8px 12px;font-family:var(--mono);font-size:10px;color:${col};text-align:right">${pctStr}</td>
-      <td style="padding:8px 12px;font-family:var(--mono);font-size:9px;color:var(--muted);text-align:right">${w.days}일</td>
-    </tr>`;
-  }).join('');
-  el.innerHTML=`<table style="width:100%;border-collapse:collapse">
-    <thead><tr style="border-bottom:1px solid var(--bd2)">
-      <th style="padding:6px 12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.45);text-align:left;font-weight:600">기간</th>
-      <th style="padding:6px 12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.45);text-align:right;font-weight:600">잔고</th>
-      <th style="padding:6px 12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.45);text-align:right;font-weight:600">PnL</th>
-      <th style="padding:6px 12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.45);text-align:right;font-weight:600">수익률</th>
-      <th style="padding:6px 12px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.45);text-align:right;font-weight:600">기록</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
 }
 
 // ── MANUAL MODAL ─────────────────────────────────────────────────────────────
