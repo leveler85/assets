@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Futures Tracker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%23060d14'/><polyline points='8,48 20,32 30,38 44,18 56,24' stroke='%2300ff88' stroke-width='4' fill='none' stroke-linecap='round' stroke-linejoin='round'/><circle cx='56' cy='24' r='4' fill='%2300ff88'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{--bg:#03080d;--bg1:#060e16;--bg2:#0a1520;--bg3:#0f1e2c;--bd:#1a3048;--bd2:#234460;--green:#00ff88;--green2:#00cc6a;--red:#ff3366;--amber:#ffbb00;--blue:#38bdf8;--purple:#a855f7;--text:#ffffff;--muted:#7eaacc;--mono:'JetBrains Mono',monospace;--disp:'Rajdhani',sans-serif;--ui:'Noto Sans KR',sans-serif}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}html{font-size:14px}
+body{background:var(--bg);color:var(--text);font-family:var(--ui);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent);opacity:.5;z-index:999}
+body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(circle,rgba(0,255,136,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;z-index:0}
+.shell{display:grid;grid-template-columns:200px 1fr;grid-template-rows:52px 1fr;min-height:100vh;position:relative;z-index:1}
+/* TOPBAR */
+.topbar{grid-column:1/-1;background:rgba(6,14,22,.96);border-bottom:1px solid var(--bd2);display:flex;align-items:center;justify-content:space-between;padding:0 20px;backdrop-filter:blur(12px);position:sticky;top:0;z-index:200}
+.brand{display:flex;align-items:center;gap:10px;cursor:pointer;text-decoration:none;transition:opacity .2s}.brand:hover{opacity:.8}
+.brand-icon{width:32px;height:32px;background:var(--bg3);border:1px solid var(--bd2);border-radius:6px;display:flex;align-items:center;justify-content:center;position:relative}
+.brand-icon::after{content:'';position:absolute;inset:6px;border-left:2px solid var(--green);border-bottom:2px solid var(--green);border-radius:0 0 0 2px;box-shadow:0 0 8px rgba(0,255,136,.3)}
+.brand-name{font-family:var(--disp);font-size:17px;font-weight:700;letter-spacing:2px}
+.brand-sub{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--muted);display:block}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.tb-clock{font-family:var(--mono);font-size:12px;letter-spacing:3px;text-shadow:0 0 10px rgba(255,255,255,.25)}
+.live-pill{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--green);padding:3px 8px;border:1px solid rgba(0,255,136,.2);border-radius:20px;background:rgba(0,255,136,.04)}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 1.4s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+/* SIDEBAR */
+.sidebar{background:var(--bg1);border-right:1px solid var(--bd);padding:16px 0;display:flex;flex-direction:column;gap:2px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto}
+.nav-sec{padding:12px 16px 5px;font-family:var(--mono);font-size:7px;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
+.nav-btn{display:flex;align-items:center;gap:9px;margin:1px 10px;padding:9px 12px;border-radius:5px;font-family:var(--mono);font-size:10px;letter-spacing:.5px;color:#a0c4d8;cursor:pointer;transition:all .15s;border:1px solid transparent}
+.nav-btn:hover{background:var(--bg2);color:#fff}
+.nav-btn.active{background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.2);color:var(--green);text-shadow:0 0 8px rgba(0,255,136,.4)}
+.nav-icon{font-size:13px;width:16px;text-align:center;flex-shrink:0}
+.sb-footer{margin-top:auto;padding:14px;border-top:1px solid var(--bd)}
+.sbf-lbl{font-family:var(--mono);font-size:7px;letter-spacing:3px;color:var(--muted);margin-bottom:3px}
+.sbf-val{font-family:var(--disp);font-size:22px;font-weight:700;color:var(--green);text-shadow:0 0 20px rgba(0,255,136,.3)}
+.sbf-pnl{font-family:var(--mono);font-size:9px;margin-top:2px}
+/* MAIN */
+.main{background:var(--bg);overflow-y:auto;padding:24px}
+.page{display:none;animation:fadeIn .2s ease}.page.on{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.pg-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px}
+.pg-title{font-family:var(--disp);font-size:26px;font-weight:700;letter-spacing:2px;line-height:1}
+.pg-title em{color:var(--green);font-style:normal}
+.pg-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px}
+.pg-actions{display:flex;gap:8px;flex-wrap:wrap}
+/* BUTTONS */
+.btn{padding:9px 18px;border-radius:4px;border:none;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:1px;font-weight:500;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--green);color:var(--bg)}.btn-primary:hover{background:var(--green2);box-shadow:0 0 16px rgba(0,255,136,.3)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--bd2)}.btn-ghost:hover{color:#fff;border-color:var(--muted)}
+.btn-sky{background:transparent;color:var(--blue);border:1px solid rgba(56,189,248,.3)}.btn-sky:hover{background:rgba(56,189,248,.07);border-color:var(--blue)}
+.btn-amber{background:transparent;color:var(--amber);border:1px solid rgba(255,187,0,.3)}.btn-amber:hover{background:rgba(255,187,0,.07);border-color:var(--amber)}
+.btn-sm{padding:5px 12px;font-size:9px}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
+.kpi-grid-2{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.kpi-card{background:linear-gradient(135deg,#0d1e30,#0a1520);border:1px solid var(--bd2);border-radius:10px;padding:18px 20px 16px;position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s}
+.kpi-card:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
+.kpi-card::after{content:'';position:absolute;top:-40px;right:-40px;width:100px;height:100px;border-radius:50%;opacity:.06}
+.kc-green::before{background:linear-gradient(90deg,#00ff88,#00cc6a);box-shadow:0 0 12px rgba(0,255,136,.5)}.kc-green::after{background:var(--green)}
+.kc-red::before{background:linear-gradient(90deg,#ff3366,#cc1144);box-shadow:0 0 12px rgba(255,51,102,.4)}.kc-red::after{background:var(--red)}
+.kc-amber::before{background:linear-gradient(90deg,#ffbb00,#ff8800);box-shadow:0 0 12px rgba(255,187,0,.4)}.kc-amber::after{background:var(--amber)}
+.kc-blue::before{background:linear-gradient(90deg,#38bdf8,#0ea5e9);box-shadow:0 0 12px rgba(56,189,248,.4)}.kc-blue::after{background:var(--blue)}
+.kc-purple::before{background:linear-gradient(90deg,#a855f7,#7c3aed);box-shadow:0 0 12px rgba(168,85,247,.4)}.kc-purple::after{background:var(--purple)}
+.kpi-label{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:2px;color:rgba(255,255,255,.9);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.kpi-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.kc-green .kpi-dot{background:var(--green);box-shadow:0 0 6px var(--green)}.kc-red .kpi-dot{background:var(--red);box-shadow:0 0 6px var(--red)}
+.kc-amber .kpi-dot{background:var(--amber);box-shadow:0 0 6px var(--amber)}.kc-blue .kpi-dot{background:var(--blue);box-shadow:0 0 6px var(--blue)}
+.kc-purple .kpi-dot{background:var(--purple);box-shadow:0 0 6px var(--purple)}
+.kpi-main{font-family:var(--disp);font-size:34px;font-weight:700;letter-spacing:1px;line-height:1;margin-bottom:10px;display:block}
+.col-green{color:#00ff88;text-shadow:0 0 20px rgba(0,255,136,.4)}.col-red{color:#ff3366;text-shadow:0 0 20px rgba(255,51,102,.4)}
+.col-amber{color:#ffbb00;text-shadow:0 0 20px rgba(255,187,0,.3)}.col-blue{color:#38bdf8;text-shadow:0 0 20px rgba(56,189,248,.3)}
+.col-purple{color:#a855f7;text-shadow:0 0 20px rgba(168,85,247,.3)}.col-white{color:#fff;text-shadow:0 0 20px rgba(255,255,255,.15)}
+.kpi-sub{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:8px}
+.kpi-sub .lbl{color:rgba(255,255,255,.55);font-weight:500}.kpi-sub .val{font-weight:600;color:#fff}
+.kpi-sub .g{color:var(--green)}.kpi-sub .r{color:var(--red)}.kpi-sub .m{color:rgba(255,255,255,.8)}
+.kpi-arrow{position:absolute;bottom:14px;right:16px;font-size:22px;opacity:.18}
+/* PANEL */
+.panel{background:var(--bg2);border:1px solid var(--bd2);border-radius:8px;padding:20px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.panel-title{font-family:var(--mono);font-size:9px;letter-spacing:2.5px;color:#c8dde8;text-transform:uppercase;font-weight:600}
+.panel-title::before{content:'/ ';color:rgba(0,255,136,.6)}
+.chart-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
+.chart-row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.tab-group{display:flex;gap:2px;background:var(--bg3);padding:3px;border-radius:4px}
+.tab-item{padding:4px 10px;font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--muted);cursor:pointer;border-radius:2px;border:none;background:none;transition:all .15s}
+.tab-item.on{background:var(--green);color:var(--bg);font-weight:600}.tab-item:not(.on):hover{color:#fff}
+/* DAY LIST */
+.dt-head{display:grid;grid-template-columns:80px 1fr 100px 90px 28px;gap:8px;align-items:center;padding:0 4px 8px;border-bottom:1px solid var(--bd2);font-family:var(--mono);font-size:7px;letter-spacing:2px;color:rgba(255,255,255,.65);text-transform:uppercase;font-weight:600}
+.dt-body{max-height:340px;overflow-y:auto}
+.dt-row{display:grid;grid-template-columns:80px 1fr 100px 90px 28px;gap:8px;align-items:center;padding:8px 4px;border-bottom:1px solid rgba(18,32,53,.6);transition:background .1s}
+.dt-row:hover{background:rgba(0,255,136,.02)}.dt-row:last-child{border:none}
+.dt-date{font-family:var(--mono);font-size:10px;color:#c0d8e8}
+.dt-bar-wrap{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.dt-bar{height:100%;border-radius:2px}
+.dt-bal{font-family:var(--mono);font-size:11px;font-weight:500;text-align:right;color:#fff}
+.dt-pnl{font-family:var(--mono);font-size:11px;font-weight:500;text-align:right}
+.dt-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:3px;transition:all .15s}
+.dt-del:hover{color:var(--red);background:rgba(255,51,102,.1)}
+.empty-msg{text-align:center;padding:40px 20px;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);line-height:2.4}
+/* HODL */
+.hodl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:20px}
+.hodl-card{background:var(--bg2);border:1px solid var(--bd2);border-radius:8px;padding:16px;position:relative;overflow:hidden}
+.hodl-name{display:flex;align-items:center;gap:8px;font-family:var(--disp);font-size:15px;font-weight:700;letter-spacing:1px;margin-bottom:10px}
+.hodl-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.hodl-tag{font-family:var(--mono);font-size:7px;letter-spacing:1px;padding:2px 6px;border-radius:3px;background:rgba(255,187,0,.1);color:var(--amber);border:1px solid rgba(255,187,0,.2);margin-left:auto}
+.hodl-bal{font-family:var(--disp);font-size:22px;font-weight:700;margin-bottom:3px}
+.hodl-pnl{font-family:var(--mono);font-size:10px;margin-bottom:10px}
+.hodl-meta{display:flex;gap:14px;padding-top:10px;border-top:1px solid var(--bd);flex-wrap:wrap}
+.hm-item .hm-lbl{font-family:var(--mono);font-size:8px;color:rgba(255,255,255,.45);margin-bottom:2px}
+.hm-item .hm-val{font-family:var(--mono);font-size:10px;font-weight:600}
+.hodl-actions{display:flex;gap:6px;margin-top:10px}
+.hodl-api-btn{flex:1;background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.2);border-radius:3px;color:var(--blue);font-family:var(--mono);font-size:8px;letter-spacing:1px;padding:5px;cursor:pointer;transition:all .15s}
+.hodl-api-btn:hover{background:rgba(56,189,248,.15);border-color:var(--blue)}
+.hodl-api-btn:disabled{opacity:.35;cursor:not-allowed}
+.hodl-upd-btn{flex:1;background:none;border:1px solid var(--bd2);border-radius:3px;color:var(--muted);font-family:var(--mono);font-size:8px;letter-spacing:1px;padding:5px;cursor:pointer;transition:all .15s}
+.hodl-upd-btn:hover{border-color:var(--amber);color:var(--amber)}
+/* API KEY STATUS badges in hodl settings */
+.has-key{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);color:var(--green)}
+.no-key{background:rgba(255,187,0,.08);border:1px solid rgba(255,187,0,.2);color:var(--amber)}
+/* CALENDAR */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cal-nav-btn{background:var(--bg3);border:1px solid var(--bd2);color:var(--muted);width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.cal-nav-btn:hover{border-color:var(--green);color:var(--green)}
+.cal-month{font-family:var(--disp);font-size:18px;font-weight:600;letter-spacing:2px}
+.cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+.cal-dow{text-align:center;font-family:var(--mono);font-size:8px;letter-spacing:1px;color:rgba(255,255,255,.55);padding:4px 0;font-weight:600}
+.cal-cells{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-cell{aspect-ratio:1;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:600;transition:all .15s}
+.cal-cell:hover{transform:scale(1.08);z-index:10}.cc-today{outline:2px solid rgba(255,255,255,.5);outline-offset:1px}.cc-empty{cursor:default}
+.cal-legend{display:flex;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);font-family:var(--mono);font-size:8px;color:var(--muted)}
+.cl-dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.cal-detail-overlay{position:fixed;inset:0;background:rgba(3,8,13,.85);backdrop-filter:blur(8px);z-index:400;display:none;align-items:center;justify-content:center}
+.cal-detail-overlay.open{display:flex}
+.cal-detail-box{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;padding:28px;min-width:220px;text-align:center;position:relative;animation:popIn .2s ease}
+.cdb-close{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}.cdb-close:hover{color:var(--red)}
+.cdb-date{font-family:var(--mono);font-size:9px;letter-spacing:3px;color:var(--muted);margin-bottom:10px}
+.cdb-pnl{font-family:var(--disp);font-size:32px;font-weight:700;line-height:1;margin-bottom:4px}
+.cdb-pnl.pos{color:var(--green);text-shadow:0 0 20px rgba(0,255,136,.4)}.cdb-pnl.neg{color:var(--red);text-shadow:0 0 20px rgba(255,51,102,.4)}
+.cdb-label{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--muted);margin-bottom:12px}
+.cdb-bal{font-family:var(--mono);font-size:11px;color:#a0c4d8;margin-bottom:8px}
+.cdb-note{font-family:var(--mono);font-size:10px;color:var(--muted);font-style:italic}
+@keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+/* SETTINGS */
+.sw{max-width:640px}
+.worker-card{background:linear-gradient(135deg,rgba(0,255,136,.04),transparent);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:22px;margin-bottom:20px}
+.wc-title{font-family:var(--mono);font-size:9px;letter-spacing:3px;color:var(--green);font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.flow-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.flow-box{font-family:var(--mono);font-size:9px;padding:7px 12px;border-radius:4px;text-align:center;line-height:1.6}
+.fb-browser{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);color:var(--blue)}
+.fb-worker{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--green);font-weight:700}
+.fb-api{background:rgba(255,187,0,.1);border:1px solid rgba(255,187,0,.25);color:var(--amber)}
+.fb-block{background:rgba(255,51,102,.07);border:1px dashed rgba(255,51,102,.3);color:var(--red)}
+.flow-arrow{font-size:16px;color:var(--muted)}.flow-arrow.red{color:var(--red)}
+.flow-label{font-family:var(--mono);font-size:8px;letter-spacing:1px;color:rgba(255,255,255,.45);margin-bottom:6px}
+.wc-desc{font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.6);line-height:1.9}
+.wc-desc strong{color:rgba(255,255,255,.9)}
+.proxy-card{background:var(--bg2);border:1px solid var(--bd2);border-radius:8px;padding:18px;margin-bottom:16px}
+.pc-title{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.75);text-transform:uppercase;font-weight:600;margin-bottom:14px}
+.code-block{background:var(--bg3);border:1px solid var(--bd);border-radius:5px;padding:14px;margin-bottom:12px;position:relative}
+.code-label{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:var(--muted);margin-bottom:8px}
+.code-pre{font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.75);line-height:1.7;overflow-x:auto;white-space:pre-wrap}
+/* test result */
+.ptr{margin-top:10px;padding:12px 14px;border-radius:5px;font-family:var(--mono);font-size:10px;line-height:1.7;display:none}
+.ptr-ok{background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);color:var(--green)}
+.ptr-fail{background:rgba(255,51,102,.07);border:1px solid rgba(255,51,102,.2);color:var(--red)}
+.ptr-warn{background:rgba(255,187,0,.07);border:1px solid rgba(255,187,0,.2);color:var(--amber)}
+.api-led-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.api-led{width:8px;height:8px;border-radius:50%;background:var(--bd2);transition:all .3s}
+.api-led.on{background:var(--green);box-shadow:0 0 10px var(--green)}.api-led.off{background:#cc1144}
+.form-block{display:flex;flex-direction:column;gap:14px;background:var(--bg2);border:1px solid var(--bd2);border-radius:8px;padding:18px;margin-bottom:14px}
+.f-group{display:flex;flex-direction:column;gap:6px}
+.f-label{font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.78);text-transform:uppercase;font-weight:600}
+.f-input{background:var(--bg3);border:1px solid var(--bd2);border-radius:4px;padding:10px 12px;color:#fff;font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s,box-shadow .15s}
+.f-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(0,255,136,.06)}.f-input::placeholder{color:rgba(126,170,204,.35)}
+.f-note{font-family:var(--mono);font-size:9px;color:#8ab8d0;line-height:1.9;padding:12px 14px;background:rgba(56,189,248,.04);border:1px solid rgba(56,189,248,.12);border-radius:4px}
+.divider{height:1px;background:var(--bd);margin:22px 0}
+.data-btns{display:flex;gap:8px;flex-wrap:wrap}
+.api-result{padding:14px;background:var(--bg3);border:1px solid var(--bd2);border-radius:5px;font-family:var(--mono);font-size:11px;margin-top:12px;display:none;color:#fff}
+.api-result .big{font-family:var(--disp);font-size:28px;font-weight:700;color:var(--green)}
+/* hodl api keys section */
+.exch-api-list{display:flex;flex-direction:column;gap:8px}
+.exch-api-row{background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:12px 14px}
+.exch-api-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.exch-api-name{font-family:var(--mono);font-size:10px;font-weight:600;flex:1}
+.exch-api-badge{font-family:var(--mono);font-size:8px;letter-spacing:1px;padding:2px 8px;border-radius:10px}
+.exch-api-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(3,8,13,.9);backdrop-filter:blur(10px);z-index:300;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;width:440px;max-width:95vw;animation:popIn .22s ease;overflow:hidden}
+.modal-box.wide{width:520px}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:var(--disp);font-size:18px;font-weight:600;letter-spacing:1px}
+.modal-x{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1}.modal-x:hover{color:var(--red)}
+.modal-body{padding:24px}.modal-actions{display:flex;gap:8px;margin-top:18px}
+.exch-sel{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.exch-btn{padding:5px 12px;border-radius:3px;border:1px solid var(--bd2);font-family:var(--mono);font-size:9px;color:var(--muted);cursor:pointer;transition:all .15s;background:var(--bg3)}
+.exch-btn.active{border-color:var(--blue);color:var(--blue);background:rgba(56,189,248,.07)}
+.amt-wrap{display:flex;align-items:center;background:var(--bg3);border:1px solid var(--bd2);border-radius:5px;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.amt-wrap:focus-within{border-color:var(--green);box-shadow:0 0 0 3px rgba(0,255,136,.06)}
+.amt-pre{padding:0 14px;font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--bg2);border-right:1px solid var(--bd);height:46px;display:flex;align-items:center;flex-shrink:0}
+.amt-input{border:none;background:transparent;padding:12px 14px;color:#fff;font-family:var(--mono);font-size:16px;font-weight:500;outline:none;flex:1;width:100%}
+.amt-input::placeholder{color:var(--muted);font-size:13px}
+.pnl-preview{margin-top:12px;padding:12px 14px;background:var(--bg3);border:1px solid var(--bd);border-radius:5px;font-family:var(--mono);display:none}
+.pnl-preview.show{display:block}
+.pp-row{display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.55);margin-bottom:4px}
+.pp-val{font-weight:600}.pp-val.g{color:var(--green)}.pp-val.r{color:var(--red)}
+.pp-row.big{font-size:13px;border-top:1px solid var(--bd);padding-top:8px;margin-top:6px}
+/* TOAST */
+.toast-stack{position:fixed;bottom:20px;right:20px;z-index:9000;display:flex;flex-direction:column;gap:8px}
+.toast-item{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--bd2);border-radius:5px;padding:10px 16px;font-family:var(--mono);font-size:10px;letter-spacing:.5px;min-width:200px;animation:slideR .25s ease}
+.toast-item.ok{border-left:3px solid var(--green)}.toast-item.err{border-left:3px solid var(--red)}.toast-item.info{border-left:3px solid var(--blue)}
+@keyframes slideR{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:var(--bg1)}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:4px}
+@media(max-width:960px){.shell{grid-template-columns:1fr}.sidebar{display:none}.kpi-grid,.kpi-grid-2{grid-template-columns:repeat(2,1fr)}.chart-row,.chart-row-2{grid-template-columns:1fr}}
+@media(max-width:580px){.kpi-grid,.kpi-grid-2{grid-template-columns:1fr 1fr}.main{padding:14px}.kpi-main{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <a class="brand" onclick="showPage('dashboard')" href="javascript:void(0)">
+    <div class="brand-icon"></div>
+    <div><div class="brand-name">FUTURES TRACKER</div><span class="brand-sub">COINEX · DAILY TRADING</span></div>
+  </a>
+  <div class="topbar-right">
+    <span class="tb-clock" id="clockEl">—</span>
+    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="nav-sec">MAIN</div>
+  <div class="nav-btn active" id="nav-dashboard" onclick="showPage('dashboard')"><span class="nav-icon">◈</span>대시보드</div>
+  <div class="nav-btn" id="nav-calendar" onclick="showPage('calendar')"><span class="nav-icon">▦</span>캘린더</div>
+  <div class="nav-sec">SECONDARY</div>
+  <div class="nav-btn" id="nav-hodl" onclick="showPage('hodl')"><span class="nav-icon">◫</span>존버 거래소</div>
+  <div class="nav-sec">CONFIG</div>
+  <div class="nav-btn" id="nav-settings" onclick="showPage('settings')"><span class="nav-icon">⚙</span>설정 · API</div>
+  <div class="nav-btn" onclick="openManual()"><span class="nav-icon">＋</span>수동 입력</div>
+  <div class="sb-footer">
+    <div class="sbf-lbl">COINEX BALANCE</div>
+    <div class="sbf-val" id="sfBal">$0</div>
+    <div class="sbf-pnl" id="sfPnl">—</div>
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- ── DASHBOARD ── -->
+<div class="page on" id="page-dashboard">
+  <div class="pg-head">
+    <div><div class="pg-title">COIN<em>EX</em> DASHBOARD</div><div class="pg-sub">데일리 트레이딩 자산 트래킹</div></div>
+    <div class="pg-actions">
+      <button class="btn btn-sky" onclick="triggerCoinexSync()">⟳ API 동기화</button>
+      <button class="btn btn-primary" onclick="openManual()">＋ 수동 입력</button>
+    </div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card kc-green"><div class="kpi-arrow">💰</div><div class="kpi-label"><span class="kpi-dot"></span>TOTAL BALANCE</div><div class="kpi-main col-white" id="k-bal">—</div><div class="kpi-sub"><span class="lbl">기준일:</span><span class="val m" id="k-bal-date">—</span></div></div>
+    <div class="kpi-card" id="k-pnl-card"><div class="kpi-arrow" id="k-pnl-arrow">📈</div><div class="kpi-label"><span class="kpi-dot"></span>TOTAL PnL</div><div class="kpi-main" id="k-pnl">—</div><div class="kpi-sub"><span class="lbl">수익률:</span><span class="val" id="k-pnl-pct">—</span></div></div>
+    <div class="kpi-card kc-blue"><div class="kpi-arrow">📅</div><div class="kpi-label"><span class="kpi-dot"></span>TODAY PnL</div><div class="kpi-main" id="k-today">—</div><div class="kpi-sub"><span class="lbl">오늘 잔고:</span><span class="val m" id="k-today-bal">—</span></div></div>
+  </div>
+  <div class="kpi-grid-2">
+    <div class="kpi-card kc-amber"><div class="kpi-arrow">↕</div><div class="kpi-label"><span class="kpi-dot"></span>전일 대비</div><div class="kpi-main" id="k-yest">—</div><div class="kpi-sub"><span class="lbl">전일 잔고:</span><span class="val m" id="k-yest-sub">—</span></div></div>
+    <div class="kpi-card kc-purple"><div class="kpi-arrow">📆</div><div class="kpi-label"><span class="kpi-dot"></span>이번주 PNL</div><div class="kpi-main" id="k-week">—</div><div class="kpi-sub"><span class="lbl">이번주 기록:</span><span class="val m" id="k-week-sub">—</span></div></div>
+    <div class="kpi-card kc-blue"><div class="kpi-arrow">🗓</div><div class="kpi-label"><span class="kpi-dot"></span>이번달 PNL</div><div class="kpi-main" id="k-month">—</div><div class="kpi-sub"><span class="lbl">이번달 기록:</span><span class="val m" id="k-month-sub">—</span></div></div>
+  </div>
+  <div class="chart-row">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">잔고 추이</div><div class="tab-group"><button class="tab-item on" onclick="setTab('bal',this)">잔고</button><button class="tab-item" onclick="setTab('pnl',this)">누적 PnL</button></div></div>
+      <div style="position:relative;height:250px"><canvas id="mainChart"></canvas></div>
+    </div>
+    <div class="panel" style="padding:16px">
+      <div class="panel-head" style="margin-bottom:10px"><div class="panel-title">일별 기록</div><span style="font-family:var(--mono);font-size:8px;color:var(--muted)" id="entryCount">0일</span></div>
+      <div class="dt-head"><span>날짜</span><span>추이</span><span style="text-align:right">잔고</span><span style="text-align:right">PnL</span><span></span></div>
+      <div class="dt-body" id="dayList"></div>
+    </div>
+  </div>
+  <div class="chart-row-2">
+    <div class="panel"><div class="panel-head"><div class="panel-title">일별 수익</div></div><div style="position:relative;height:190px"><canvas id="dailyBar"></canvas></div></div>
+    <div class="panel"><div class="panel-head"><div class="panel-title">월별 PnL</div></div><div style="position:relative;height:190px"><canvas id="monthlyBar"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ── CALENDAR ── -->
+<div class="page" id="page-calendar">
+  <div class="pg-head"><div><div class="pg-title">TRADE <em>CALENDAR</em></div><div class="pg-sub">월별 수익·손실 히트맵</div></div></div>
+  <div class="panel">
+    <div class="cal-nav"><button class="cal-nav-btn" onclick="calMove(-1)">‹</button><div class="cal-month" id="calLabel">—</div><button class="cal-nav-btn" onclick="calMove(+1)">›</button></div>
+    <div class="cal-dow-row"><div class="cal-dow">일</div><div class="cal-dow">월</div><div class="cal-dow">화</div><div class="cal-dow">수</div><div class="cal-dow">목</div><div class="cal-dow">금</div><div class="cal-dow">토</div></div>
+    <div class="cal-cells" id="calCells"></div>
+    <div class="cal-legend"><span><i class="cl-dot" style="background:var(--green)"></i>수익</span><span><i class="cl-dot" style="background:var(--red)"></i>손실</span><span><i class="cl-dot" style="background:var(--bd2)"></i>데이터없음</span></div>
+  </div>
+  <div class="panel" style="margin-top:16px"><div class="panel-head"><div class="panel-title">월별 PnL 요약</div></div><div style="position:relative;height:200px"><canvas id="calMonthly"></canvas></div></div>
+</div>
+
+<!-- ── HODL ── -->
+<div class="page" id="page-hodl">
+  <div class="pg-head">
+    <div><div class="pg-title">존버 <em>PORTFOLIO</em></div><div class="pg-sub">고점 물린 포지션 — 스냅샷 기록 · API 자동 조회 가능</div></div>
+    <div class="pg-actions">
+      <button class="btn btn-sky" onclick="syncAllHodl()">⟳ 전체 API 동기화</button>
+      <button class="btn btn-amber" onclick="openHodlModal()">＋ 수동 업데이트</button>
+    </div>
+  </div>
+  <div class="kpi-grid" style="margin-bottom:20px">
+    <div class="kpi-card kc-amber"><div class="kpi-arrow">💼</div><div class="kpi-label"><span class="kpi-dot"></span>총 존버 자산</div><div class="kpi-main col-amber" id="h-total">$0</div><div class="kpi-sub"><span class="lbl">거래소 수:</span><span class="val m" id="h-count">0개</span></div></div>
+    <div class="kpi-card kc-red"><div class="kpi-arrow">📉</div><div class="kpi-label"><span class="kpi-dot"></span>총 평가손실</div><div class="kpi-main col-red" id="h-pnl">—</div><div class="kpi-sub"><span class="lbl">평균 손실률:</span><span class="val r" id="h-pct">—</span></div></div>
+    <div class="kpi-card kc-blue"><div class="kpi-arrow">🎯</div><div class="kpi-label"><span class="kpi-dot"></span>손익분기 필요</div><div class="kpi-main col-blue" id="h-bep">—</div><div class="kpi-sub"><span class="lbl">총 투자원금:</span><span class="val m" id="h-cost">—</span></div></div>
+  </div>
+  <div class="hodl-grid" id="hodlGrid"><div class="empty-msg" style="grid-column:1/-1">존버 거래소가 없습니다<br><span style="font-size:9px">설정에서 거래소 API 키를 등록하거나, 수동 업데이트 버튼으로 잔고를 추가하세요</span></div></div>
+</div>
+
+<!-- ── SETTINGS ── -->
+<div class="page" id="page-settings">
+  <div class="pg-head"><div><div class="pg-title">설정 · <em>API</em></div><div class="pg-sub">Worker · CoinEx · 존버거래소 API 관리</div></div></div>
+  <div class="sw">
+
+    <!-- Worker 설명 -->
+    <div class="worker-card">
+      <div class="wc-title">⚡ Cloudflare Worker가 왜 필요한가?</div>
+      <div class="flow-label">▸ WORKER 없이 — CORS 오류 (브라우저 보안 차단)</div>
+      <div class="flow-row">
+        <div class="flow-box fb-browser">브라우저<br><span style="font-size:8px">github.io</span></div>
+        <div class="flow-arrow red">✕ →</div>
+        <div class="flow-box fb-block">api.coinex.com 등<br><span style="font-size:8px">직접 요청 차단</span></div>
+      </div>
+      <div class="flow-label">▸ WORKER 사용 시 — 정상 동작 (서버 간 통신)</div>
+      <div class="flow-row" style="margin-bottom:16px">
+        <div class="flow-box fb-browser">브라우저<br><span style="font-size:8px">github.io</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box fb-worker">Cloudflare<br>Worker<br><span style="font-size:8px">서버 역할 · CORS 없음</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box fb-api">각 거래소 API<br><span style="font-size:8px">정상 응답 ✓</span></div>
+      </div>
+      <div class="wc-desc">
+        <strong>CORS</strong>는 브라우저가 다른 도메인으로 직접 API 호출하는 것을 막는 보안 정책입니다.<br>
+        Cloudflare Worker는 <strong>무료 서버</strong>로 동작해 브라우저 대신 거래소 API를 호출합니다.<br>
+        이 Worker 하나로 <strong>CoinEx + 모든 존버 거래소 API</strong>를 모두 처리합니다.<br>
+        무료 플랜: 하루 10만 요청 · 배포 약 5분 소요
+      </div>
+    </div>
+
+    <!-- Worker 설정 -->
+    <div class="proxy-card">
+      <div class="pc-title">① Worker 배포 및 URL 설정</div>
+      <div style="font-family:var(--mono);font-size:8px;color:var(--muted);line-height:2;margin-bottom:12px">
+        <a href="https://cloudflare.com" target="_blank" style="color:var(--blue)">cloudflare.com</a> 무료 가입 → Workers &amp; Pages → Create Application → Hello World<br>
+        아래 코드 전체 복사 → Worker 에디터에 붙여넣기 → 배포(Deploy) → URL 입력 → 테스트
+      </div>
+      <div class="code-block">
+        <div class="code-label">WORKER 코드 — 멀티 거래소 지원 (CoinEx + Binance + Bybit + BingX + Bitget + HTX + OKX + Pionex)</div>
+        <pre class="code-pre" id="workerCode">export default {
+  async fetch(request) {
+    // CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, DELETE',
+        'Access-Control-Allow-Headers': '*',
+      }});
+    }
+
+    const url = new URL(request.url);
+    // ?target=coinex  → https://api.coinex.com
+    // ?target=binance → https://api.binance.com
+    // ?target=bybit   → https://api.bybit.com
+    // ?target=bingx   → https://open-api.bingx.com
+    // ?target=bitget  → https://api.bitget.com
+    // ?target=htx     → https://api.huobi.pro
+    // ?target=okx     → https://www.okx.com
+    // ?target=pionex  → https://api.pionex.com
+    const hosts = {
+      coinex:  'https://api.coinex.com',
+      binance: 'https://api.binance.com',
+      bybit:   'https://api.bybit.com',
+      bingx:   'https://open-api.bingx.com',
+      bitget:  'https://api.bitget.com',
+      htx:     'https://api.huobi.pro',
+      okx:     'https://www.okx.com',
+      pionex:  'https://api.pionex.com',
+    };
+
+    const target = url.searchParams.get('target') || 'coinex';
+    const baseHost = hosts[target] || hosts.coinex;
+    url.searchParams.delete('target');
+
+    const apiUrl = baseHost + url.pathname + (url.search ? url.search : '');
+
+    // Forward all original headers
+    const headers = {};
+    for (const [k, v] of request.headers.entries()) {
+      if (!['host','content-length'].includes(k.toLowerCase())) {
+        headers[k] = v;
+      }
+    }
+
+    const res = await fetch(apiUrl, {
+      method: request.method,
+      headers,
+      body: request.method !== 'GET' ? await request.text() : undefined,
+    });
+
+    const data = await res.text();
+    return new Response(data, {
+      status: res.status,
+      headers: {
+        'Content-Type': res.headers.get('Content-Type') || 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
+  }
+};</pre>
+        <button class="btn btn-ghost btn-sm" style="position:absolute;top:10px;right:10px" onclick="copyWorkerCode()">📋 복사</button>
+      </div>
+      <div class="f-group" style="margin-bottom:12px">
+        <label class="f-label">Worker URL</label>
+        <input class="f-input" type="text" id="proxyInput" placeholder="https://your-worker.your-name.workers.dev">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="flex:1" onclick="saveProxyUrl()">저장</button>
+        <button class="btn btn-sky" style="flex:1" onclick="testProxy()">⟳ 연결 테스트</button>
+      </div>
+      <div id="proxyTestResult" class="ptr"></div>
+    </div>
+
+    <!-- CoinEx API -->
+    <div class="proxy-card">
+      <div class="pc-title">② CoinEx API 키 (데일리 트래킹)</div>
+      <div class="api-led-bar">
+        <div class="api-led" id="apiLed"></div>
+        <span id="apiStatusTxt" style="font-family:var(--mono);font-size:10px;color:var(--muted)">미연결</span>
+        <span id="proxyBadge" style="font-family:var(--mono);font-size:9px;margin-left:10px;padding:2px 8px;border-radius:10px"></span>
+      </div>
+      <div class="form-block" style="margin-bottom:12px">
+        <div class="f-group"><label class="f-label">API KEY</label><input class="f-input" type="password" id="apiKey" placeholder="CoinEx API Key"></div>
+        <div class="f-group"><label class="f-label">API SECRET</label><input class="f-input" type="password" id="apiSecret" placeholder="CoinEx API Secret"></div>
+      </div>
+      <div class="f-note" style="margin-bottom:12px">
+        ⚠ 읽기 전용(Read Only) 키 사용 권장 · API 키는 localStorage에만 저장됨<br>
+        ℹ Worker URL 없으면 CORS 오류 — Worker 먼저 설정 필요
+      </div>
+      <div id="apiResult" class="api-result"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-ghost" onclick="clearCoinexKeys()">키 초기화</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveAndSyncCoinex()">저장 · 잔고 동기화</button>
+      </div>
+    </div>
+
+    <!-- 존버 거래소 API 키 -->
+    <div class="proxy-card">
+      <div class="pc-title">③ 존버 거래소 API 키 (잔고 스냅샷)</div>
+      <div style="font-family:var(--mono);font-size:8px;color:var(--muted);line-height:1.9;margin-bottom:14px">
+        ℹ 각 거래소의 <strong style="color:rgba(255,255,255,.7)">읽기 전용(Read Only)</strong> API 키를 등록하면 존버 페이지에서 잔고를 자동으로 가져옵니다<br>
+        ℹ Worker가 설정되어 있어야 작동합니다 · 등록하지 않은 거래소는 수동 입력 사용
+      </div>
+      <div class="exch-api-list" id="exchApiList"><!-- JS로 렌더링 --></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-ghost" style="flex:1" onclick="clearAllHodlKeys()">전체 키 초기화</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveAllHodlKeys()">저장</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="panel-title" style="margin-bottom:12px">데이터 관리</div>
+    <div class="data-btns">
+      <button class="btn btn-ghost" onclick="exportData()">↑ JSON 내보내기</button>
+      <label class="btn btn-ghost" style="cursor:pointer">↓ 가져오기<input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
+      <button class="btn" style="background:transparent;color:#cc1144;border:1px solid rgba(204,17,68,.3);border-radius:4px;padding:9px 14px;font-family:var(--mono);font-size:10px;cursor:pointer" onclick="clearAll()">✕ 전체 삭제</button>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- MANUAL MODAL (CoinEx) -->
+<div class="modal-overlay" id="manualModal">
+  <div class="modal-box">
+    <div class="modal-head"><div class="modal-title">CoinEx 수동 입력</div><button class="modal-x" onclick="closeManual()">×</button></div>
+    <div class="modal-body">
+      <div class="form-block" style="margin-bottom:0;gap:12px">
+        <div class="f-group"><label class="f-label">날짜</label><input class="f-input" type="date" id="manDate"></div>
+        <div class="f-group"><label class="f-label">총 잔고 (USDT)</label><div class="amt-wrap"><span class="amt-pre">USDT</span><input class="amt-input" type="number" id="manAmt" placeholder="오늘 총 잔고" oninput="calcPreview()"></div></div>
+        <div class="f-group"><label class="f-label">메모 (선택)</label><input class="f-input" type="text" id="manNote" placeholder="선택사항"></div>
+      </div>
+      <div class="pnl-preview" id="manPreview">
+        <div class="pp-row"><span>전일 잔고</span><span class="pp-val" id="pp-prev">—</span></div>
+        <div class="pp-row big"><span>예상 PnL</span><span class="pp-val" id="pp-pnl">—</span></div>
+      </div>
+      <div class="modal-actions"><button class="btn btn-ghost" onclick="closeManual()">취소</button><button class="btn btn-primary" style="flex:2" onclick="submitManual()">저장</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- HODL MANUAL MODAL -->
+<div class="modal-overlay" id="hodlModal">
+  <div class="modal-box wide">
+    <div class="modal-head"><div class="modal-title">존버 잔고 수동 업데이트</div><button class="modal-x" onclick="closeHodlModal()">×</button></div>
+    <div class="modal-body">
+      <div class="form-block" style="margin-bottom:12px;gap:14px">
+        <div class="f-group"><label class="f-label">거래소 선택</label><div class="exch-sel" id="exchSel"></div></div>
+        <div class="f-group"><label class="f-label">날짜</label><input class="f-input" type="date" id="hodlDate"></div>
+        <div class="f-group"><label class="f-label">현재 잔고 (USDT 환산)</label><div class="amt-wrap"><span class="amt-pre">USDT</span><input class="amt-input" type="number" id="hodlBal" placeholder="현재 잔고"></div></div>
+        <div class="f-group"><label class="f-label">투자 원금 (처음 입금한 금액)</label><div class="amt-wrap"><span class="amt-pre">USDT</span><input class="amt-input" type="number" id="hodlCost" placeholder="최초 투자원금"></div></div>
+        <div class="f-group"><label class="f-label">메모</label><input class="f-input" type="text" id="hodlNote" placeholder="예: BTC 3개 존버중"></div>
+      </div>
+      <div class="modal-actions"><button class="btn btn-ghost" onclick="closeHodlModal()">취소</button><button class="btn btn-amber" style="flex:2" onclick="submitHodl()">저장</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- CALENDAR DETAIL -->
+<div class="cal-detail-overlay" id="calDetail">
+  <div class="cal-detail-box">
+    <button class="cdb-close" onclick="closeCalDetail()">×</button>
+    <div class="cdb-date" id="cdb-date">—</div><div class="cdb-pnl" id="cdb-pnl">—</div>
+    <div class="cdb-label" id="cdb-label">—</div><div class="cdb-bal" id="cdb-bal"></div><div class="cdb-note" id="cdb-note"></div>
+  </div>
+</div>
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+'use strict';
+
+// ── EXCHANGE CONFIG ──────────────────────────────────────────────────────────
+// Each exchange: id, name, color, apiTarget (matches Worker ?target=X),
+// balanceFn: async(key, secret, proxyBase) => totalUSDT
+const HODL_EX = [
+  { id:'binance', name:'Binance', color:'#F0B90B', target:'binance' },
+  { id:'bybit',   name:'Bybit',   color:'#F7A600', target:'bybit'   },
+  { id:'bingx',   name:'BingX',   color:'#4488FF', target:'bingx'   },
+  { id:'bitget',  name:'Bitget',  color:'#00CEB8', target:'bitget'  },
+  { id:'htx',     name:'HTX',     color:'#2196F3', target:'htx'     },
+  { id:'okx',     name:'OKX',     color:'#AAAAAA', target:'okx'     },
+  { id:'pionex',  name:'Pionex',  color:'#00D09C', target:'pionex'  },
+  { id:'upbit',   name:'Upbit',   color:'#1763B6', target:null      }, // Upbit: KRW only, manual
+];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let entries   = JSON.parse(localStorage.getItem('ft_entries')  || '[]');
+let coinexApi = JSON.parse(localStorage.getItem('ft_coinex')   || '{}');
+let hodlData  = JSON.parse(localStorage.getItem('ft_hodl')     || '{}');
+let hodlKeys  = JSON.parse(localStorage.getItem('ft_hodlkeys') || '{}');
+// hodlKeys: { binance: {key:'', secret:''}, ... }
+let proxyUrl  = localStorage.getItem('ft_proxy') || '';
+let workerVer = localStorage.getItem('ft_workerver') || ''; // 'old'|'new'|''
+let calY = new Date().getFullYear(), calM = new Date().getMonth();
+let chartTab = 'bal', charts = {}, selEx = HODL_EX[0].id;
+
+// ── PERSIST ──────────────────────────────────────────────────────────────────
+const save       = () => { entries.sort((a,b)=>a.date.localeCompare(b.date)); localStorage.setItem('ft_entries', JSON.stringify(entries)); };
+const saveHodl   = () => localStorage.setItem('ft_hodl',     JSON.stringify(hodlData));
+const saveHodlK  = () => localStorage.setItem('ft_hodlkeys', JSON.stringify(hodlKeys));
+const saveProxy  = () => localStorage.setItem('ft_proxy',    proxyUrl);
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+const todayStr = () => new Date().toISOString().split('T')[0];
+const fmt2  = n => (+n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtP  = n => (n>=0?'+$':'-$') + fmt2(Math.abs(n));
+const colV  = n => n>0?'var(--green)':n<0?'var(--red)':'var(--muted)';
+const dayPnl= i => i<=0 ? 0 : entries[i].balance - entries[i-1].balance;
+const getBase = () => entries.length ? entries[0].balance : 0;
+
+// HMAC-SHA256 helper
+async function hmacHex(secret, msg) {
+  const ck = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', ck, new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── NAV ──────────────────────────────────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nav-btn[id^="nav-"]').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('on');
+  const nb = document.getElementById('nav-'+id); if(nb) nb.classList.add('active');
+  if(id==='dashboard') renderDashboard();
+  if(id==='calendar')  renderCalendar();
+  if(id==='hodl')      renderHodl();
+  if(id==='settings')  renderSettings();
+}
+setInterval(()=>{ document.getElementById('clockEl').textContent = new Date().toLocaleTimeString('ko-KR',{hour12:false}); }, 1000);
+
+function updateSidebar() {
+  const last=entries[entries.length-1], base=getBase();
+  document.getElementById('sfBal').textContent = last ? '$'+fmt2(last.balance) : '$0';
+  if(last&&base){ const tp=last.balance-base, el=document.getElementById('sfPnl'); el.textContent='PnL: '+fmtP(tp); el.style.color=colV(tp); }
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────────────────────
+function renderDashboard() { renderKpi(); renderDayList(); renderMainChart(); renderDailyBar(); renderMonthlyBar('monthlyBar'); updateSidebar(); }
+
+function renderKpi() {
+  const last=entries[entries.length-1], base=getBase(), today=todayStr();
+  const setK=(vid,val,cls,sid,stxt,scls)=>{
+    const el=document.getElementById(vid); if(!el) return;
+    el.textContent=val; el.className='kpi-main '+cls;
+    const s=document.getElementById(sid); if(s){s.textContent=stxt; if(scls) s.className='val '+scls;}
+  };
+  setK('k-bal', last?'$'+fmt2(last.balance):'—', 'col-white', 'k-bal-date', last?last.date:'기록없음');
+  if(last&&base){ const tp=last.balance-base, pct=tp/base*100; setK('k-pnl',fmtP(tp),tp>=0?'col-green':'col-red','k-pnl-pct',(pct>=0?'+':'')+pct.toFixed(2)+'%',tp>=0?'g':'r'); document.getElementById('k-pnl-card').className='kpi-card '+(tp>=0?'kc-green':'kc-red'); document.getElementById('k-pnl-arrow').textContent=tp>=0?'📈':'📉'; }
+  else setK('k-pnl','—','col-white','k-pnl-pct','기록없음');
+  const te=entries.find(e=>e.date===today);
+  if(te){ const ti=entries.findIndex(e=>e.date===today), tp=dayPnl(ti); setK('k-today',fmtP(tp),tp>=0?'col-green':'col-red','k-today-bal','$'+fmt2(te.balance)); }
+  else setK('k-today','—','col-white','k-today-bal','오늘 기록없음');
+  if(entries.length>=2){ const dp=dayPnl(entries.length-1), pv=entries[entries.length-2]; setK('k-yest',fmtP(dp),dp>=0?'col-green':'col-red','k-yest-sub','$'+fmt2(pv.balance)); }
+  else setK('k-yest','—','col-white','k-yest-sub','이전 기록없음');
+  const now=new Date(), ws=new Date(now); ws.setDate(now.getDate()-now.getDay());
+  const wsStr=ws.toISOString().split('T')[0], we=entries.filter(e=>e.date>=wsStr);
+  if(we.length){ const wr=entries.filter(e=>e.date<wsStr), rb=wr.length?wr[wr.length-1].balance:we[0].balance, wp=we[we.length-1].balance-rb; setK('k-week',fmtP(wp),wp>=0?'col-green':'col-red','k-week-sub',we.length+'일'); }
+  else setK('k-week','—','col-white','k-week-sub','이번주 기록없음');
+  const ms=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`, me=entries.filter(e=>e.date>=ms);
+  if(me.length){ const mr=entries.filter(e=>e.date<ms), rb=mr.length?mr[mr.length-1].balance:me[0].balance, mp=me[me.length-1].balance-rb; setK('k-month',fmtP(mp),mp>=0?'col-green':'col-red','k-month-sub',me.length+'일'); }
+  else setK('k-month','—','col-white','k-month-sub','이번달 기록없음');
+}
+
+function renderDayList() {
+  const el=document.getElementById('dayList'); if(!el) return;
+  document.getElementById('entryCount').textContent = entries.length+'일';
+  if(!entries.length){ el.innerHTML='<div class="empty-msg">기록이 없습니다<br>수동 입력 또는 API 동기화로<br>첫 잔고를 추가하세요</div>'; return; }
+  const maxB=Math.max(...entries.map(e=>e.balance));
+  el.innerHTML=[...entries].reverse().map((e,ri)=>{
+    const oi=entries.length-1-ri, dp=dayPnl(oi), bp=(e.balance/maxB*100).toFixed(1);
+    return `<div class="dt-row"><span class="dt-date">${e.date.slice(5)}</span><div class="dt-bar-wrap"><div class="dt-bar" style="width:${bp}%;background:${dp>=0?'var(--green)':'var(--red)'}"></div></div><span class="dt-bal">$${fmt2(e.balance)}</span><span class="dt-pnl" style="color:${dp>0?'var(--green)':dp<0?'var(--red)':'var(--muted)'}">${oi===0?'기준':fmtP(dp)}</span><button class="dt-del" onclick="delEntry('${e.date}')">✕</button></div>`;
+  }).join('');
+}
+
+// ── CHARTS ───────────────────────────────────────────────────────────────────
+const cCfg = () => ({
+  responsive:true, maintainAspectRatio:false,
+  plugins:{legend:{display:false},tooltip:{backgroundColor:'#0a1520',borderColor:'#234460',borderWidth:1,titleColor:'#38bdf8',bodyColor:'#cde4f0',titleFont:{family:"'JetBrains Mono',monospace",size:10},bodyFont:{family:"'JetBrains Mono',monospace",size:11},padding:10}},
+  scales:{x:{ticks:{color:'#4a7a99',font:{family:"'JetBrains Mono',monospace",size:9},maxRotation:0,maxTicksLimit:8},grid:{color:'rgba(26,48,72,.5)'}},y:{ticks:{color:'#4a7a99',font:{family:"'JetBrains Mono',monospace",size:9},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(26,48,72,.5)'},border:{color:'transparent'}}}
+});
+function mkChart(id,cfg){if(charts[id])charts[id].destroy(); const c=document.getElementById(id); if(c) charts[id]=new Chart(c,cfg);}
+function setTab(tab,btn){chartTab=tab; document.querySelectorAll('#page-dashboard .tab-item').forEach(t=>t.classList.remove('on')); btn.classList.add('on'); renderMainChart();}
+function renderMainChart(){
+  const labels=entries.map(e=>e.date.slice(5)), base=getBase(), ctx=document.getElementById('mainChart'); if(!ctx) return;
+  if(chartTab==='pnl'){
+    const data=entries.map(e=>+(e.balance-base).toFixed(2)), last=data[data.length-1]??0;
+    const g=ctx.getContext('2d').createLinearGradient(0,0,0,300);
+    last>=0?(g.addColorStop(0,'rgba(0,255,136,.18)'),g.addColorStop(1,'rgba(0,255,136,0)')):(g.addColorStop(0,'rgba(255,51,102,.15)'),g.addColorStop(1,'rgba(255,51,102,0)'));
+    mkChart('mainChart',{type:'line',data:{labels,datasets:[{label:'누적PnL',data,borderColor:last>=0?'var(--green)':'var(--red)',backgroundColor:g,fill:true,tension:.4,pointRadius:3,pointHoverRadius:5,pointBackgroundColor:last>=0?'var(--green)':'var(--red)'}]},options:{...cCfg(),plugins:{...cCfg().plugins,tooltip:{...cCfg().plugins.tooltip,callbacks:{label:c=>' PnL: $'+fmt2(c.parsed.y)}}}}});
+  } else {
+    const data=entries.map(e=>e.balance);
+    const g=ctx.getContext('2d').createLinearGradient(0,0,0,300); g.addColorStop(0,'rgba(14,165,233,.22)'); g.addColorStop(1,'rgba(14,165,233,0)');
+    mkChart('mainChart',{type:'line',data:{labels,datasets:[{label:'잔고',data,borderColor:'var(--blue)',backgroundColor:g,fill:true,tension:.4,pointRadius:3,pointHoverRadius:5,pointBackgroundColor:'var(--blue)'}]},options:{...cCfg(),plugins:{...cCfg().plugins,tooltip:{...cCfg().plugins.tooltip,callbacks:{label:c=>' 잔고: $'+fmt2(c.parsed.y)}}}}});
+  }
+}
+function renderDailyBar(){
+  const pnls=entries.map((e,i)=>+dayPnl(i).toFixed(2)), labels=entries.map(e=>e.date.slice(5));
+  mkChart('dailyBar',{type:'bar',data:{labels,datasets:[{label:'일별PnL',data:pnls,backgroundColor:pnls.map(v=>v>=0?'rgba(0,255,136,.55)':'rgba(255,51,102,.55)'),borderColor:pnls.map(v=>v>=0?'var(--green)':'var(--red)'),borderWidth:1,borderRadius:3}]},options:cCfg()});
+}
+function renderMonthlyBar(cid){
+  const byM={};entries.forEach((e,i)=>{const k=e.date.slice(0,7);byM[k]=(byM[k]||[]).concat(i);});
+  const months=Object.keys(byM).sort();
+  const vals=months.map(m=>{const idxs=byM[m],f=idxs[0],l=idxs[idxs.length-1],ref=f>0?entries[f-1].balance:entries[f].balance;return+(entries[l].balance-ref).toFixed(2);});
+  mkChart(cid,{type:'bar',data:{labels:months,datasets:[{label:'월별PnL',data:vals,backgroundColor:vals.map(v=>v>=0?'rgba(0,255,136,.5)':'rgba(255,51,102,.5)'),borderColor:vals.map(v=>v>=0?'var(--green)':'var(--red)'),borderWidth:1,borderRadius:4}]},options:cCfg()});
+}
+
+// ── MANUAL MODAL ─────────────────────────────────────────────────────────────
+function openManual(){document.getElementById('manDate').value=todayStr();document.getElementById('manAmt').value='';document.getElementById('manNote').value='';document.getElementById('manPreview').classList.remove('show');document.getElementById('manualModal').classList.add('open');setTimeout(()=>document.getElementById('manAmt').focus(),100);}
+function closeManual(){document.getElementById('manualModal').classList.remove('open');}
+function calcPreview(){
+  const amt=parseFloat(document.getElementById('manAmt').value), prev=document.getElementById('manPreview');
+  if(isNaN(amt)||amt<=0){prev.classList.remove('show');return;}
+  const sd=document.getElementById('manDate').value, pe=entries.filter(e=>e.date<sd), pb=pe.length?pe[pe.length-1].balance:null;
+  if(!pb){prev.classList.remove('show');return;}
+  const pnl=amt-pb; document.getElementById('pp-prev').textContent='$'+fmt2(pb);
+  const pe2=document.getElementById('pp-pnl'); pe2.textContent=fmtP(pnl); pe2.className='pp-val '+(pnl>=0?'g':'r'); prev.classList.add('show');
+}
+function submitManual(){
+  const date=document.getElementById('manDate').value, amt=parseFloat(document.getElementById('manAmt').value), note=document.getElementById('manNote').value.trim();
+  if(!date){toast('날짜를 입력하세요','err');return;} if(isNaN(amt)||amt<=0){toast('잔고를 입력하세요','err');return;}
+  const idx=entries.findIndex(e=>e.date===date);
+  if(idx>=0){entries[idx]={date,balance:amt,note};toast('기록 업데이트','info');}else{entries.push({date,balance:amt,note});toast('잔고 저장 완료','ok');}
+  save(); renderDashboard(); closeManual();
+}
+function delEntry(date){if(!confirm(date+' 기록을 삭제하시겠습니까?'))return; entries=entries.filter(e=>e.date!==date); save(); renderDashboard(); toast('삭제 완료','info');}
+
+// ── COINEX API ────────────────────────────────────────────────────────────────
+async function triggerCoinexSync(){
+  if(!coinexApi.key||!coinexApi.secret){toast('CoinEx API 키가 없습니다. 설정으로 이동합니다.','err');showPage('settings');return;}
+  toast('CoinEx 잔고 조회 중...','info');
+  await fetchCoinexBalance(false);
+}
+async function saveAndSyncCoinex(){
+  const k=document.getElementById('apiKey').value.trim(), s=document.getElementById('apiSecret').value.trim();
+  if(!k||!s){toast('API 키와 시크릿을 입력하세요','err');return;}
+  coinexApi={key:k,secret:s}; localStorage.setItem('ft_coinex',JSON.stringify(coinexApi));
+  renderSettings(); toast('저장 완료. 잔고 조회 중...','info');
+  await fetchCoinexBalance(true);
+}
+function clearCoinexKeys(){coinexApi={};localStorage.removeItem('ft_coinex');document.getElementById('apiKey').value='';document.getElementById('apiSecret').value='';renderSettings();toast('CoinEx API 키 초기화','info');}
+
+async function fetchCoinexBalance(showInPage){
+  const resEl=document.getElementById('apiResult');
+  const base=proxyUrl||'https://api.coinex.com';
+  const isByProxy=!!proxyUrl;
+  try{
+    const ts=Date.now().toString(), method='GET', path='/v2/assets/futures/balance';
+    const hex=await hmacHex(coinexApi.secret, method+path+''+ts);
+    const url=isByProxy ? base+path : base+path; // old Worker compatible - no ?target needed
+    const r=await fetch(url,{headers:{'X-COINEX-KEY':coinexApi.key,'X-COINEX-SIGN':hex,'X-COINEX-TIMESTAMP':ts,'Content-Type':'application/json'}});
+    const data=await r.json();
+    if(data.code!==0){
+      if(showInPage&&resEl){resEl.style.display='block';resEl.innerHTML=`<span style="color:var(--red)">오류 ${data.code}: ${data.message}</span>`;}
+      toast('CoinEx API 오류: '+data.message,'err'); return;
+    }
+    const items=Array.isArray(data.data)?data.data:[data.data];
+    let total=0; items.forEach(it=>total+=parseFloat(it.available||0)+parseFloat(it.frozen||0)+parseFloat(it.unrealized_pnl||0)); total=+total.toFixed(2);
+    if(showInPage&&resEl){resEl.style.display='block';resEl.innerHTML=`<div style="color:var(--muted);font-size:9px;letter-spacing:2px;margin-bottom:4px">선물 계좌 총 잔고</div><div class="big">$${fmt2(total)}</div><div style="color:var(--muted);font-size:9px;margin-top:6px">${todayStr()} 기준 저장</div>`;}
+    const today=todayStr(), idx=entries.findIndex(e=>e.date===today);
+    if(idx>=0){entries[idx].balance=total;entries[idx].note='API';}else{entries.push({date:today,balance:total,note:'API'});}
+    save(); renderDashboard(); toast('CoinEx 동기화 완료: $'+fmt2(total),'ok');
+  }catch(e){
+    const msg=proxyUrl?'Worker 호출 실패. URL 확인 필요.':'CORS 오류 — 설정에서 Worker URL을 입력하세요.';
+    if(showInPage&&resEl){resEl.style.display='block';resEl.innerHTML=`<span style="color:var(--muted);font-size:9px;line-height:1.8">${msg}</span>`;}
+    toast(msg,'err');
+  }
+}
+
+// ── HODL ─────────────────────────────────────────────────────────────────────
+function renderHodl(){
+  let bal=0, cost=0, cnt=0;
+  HODL_EX.forEach(ex=>{const r=hodlData[ex.id]; if(!r||!r.length)return; bal+=r[r.length-1].balance; cost+=r[r.length-1].cost||0; cnt++;});
+  const pnl=bal-cost, pct=cost>0?pnl/cost*100:0, bep=bal>0?(cost-bal)/bal*100:0;
+  const s=(id,v,c)=>{const e=document.getElementById(id);if(!e)return;e.textContent=v;if(c)e.style.color=c;};
+  s('h-total','$'+fmt2(bal)); s('h-count',cnt+'개');
+  s('h-pnl',fmtP(pnl),pnl>=0?'var(--green)':'var(--red)');
+  s('h-pct',(pct>=0?'+':'')+pct.toFixed(1)+'%',pct>=0?'var(--green)':'var(--red)');
+  s('h-bep',bal>0?'+'+bep.toFixed(1)+'% 필요':'—'); s('h-cost','$'+fmt2(cost));
+
+  const grid=document.getElementById('hodlGrid'); if(!grid)return;
+  const any=HODL_EX.some(ex=>hodlData[ex.id]&&hodlData[ex.id].length);
+  if(!any){grid.innerHTML='<div class="empty-msg" style="grid-column:1/-1">존버 거래소가 없습니다<br><span style="font-size:9px">설정에서 API 키 등록 후 동기화하거나, 수동 업데이트 버튼을 사용하세요</span></div>';return;}
+
+  grid.innerHTML=HODL_EX.map(ex=>{
+    const r=hodlData[ex.id]; if(!r||!r.length) return'';
+    const last=r[r.length-1], p=last.balance-(last.cost||0), pct2=last.cost>0?(p/last.cost*100).toFixed(1):0;
+    const hasKey=!!(hodlKeys[ex.id]?.key);
+    const isNewWorker=workerVer==='new'||(proxyUrl&&workerVer===''); // unknown = allow try
+    const canApi=hasKey&&proxyUrl&&ex.target&&isNewWorker;
+    const noApiReason=!proxyUrl?'Worker 미설정':!ex.target?'수동 입력만 가능':!hasKey?'API 키 미등록':workerVer==='old'?'구버전 Worker — 새 코드로 교체 필요':'';
+    return `<div class="hodl-card" style="border-top:2px solid ${ex.color}40">
+      <div class="hodl-name"><div class="hodl-dot" style="background:${ex.color}"></div>${ex.name}<span class="hodl-tag">존버</span></div>
+      <div class="hodl-bal">$${fmt2(last.balance)}</div>
+      <div class="hodl-pnl" style="color:${colV(p)}">${fmtP(p)} (${Number(pct2)>=0?'+':''}${pct2}%)</div>
+      <div class="hodl-meta">
+        <div class="hm-item"><div class="hm-lbl">투자원금</div><div class="hm-val">$${fmt2(last.cost||0)}</div></div>
+        <div class="hm-item"><div class="hm-lbl">업데이트</div><div class="hm-val">${last.date}</div></div>
+        ${last.note?`<div class="hm-item"><div class="hm-lbl">메모</div><div class="hm-val" style="color:var(--muted);font-size:9px">${last.note}</div></div>`:''}
+      </div>
+      <div class="hodl-actions">
+        <button class="hodl-api-btn" id="apibtn-${ex.id}" onclick="syncOneHodl('${ex.id}')" ${canApi?'':'disabled'} title="${canApi?'API로 잔고 조회':noApiReason}">
+          ${canApi?'⟳ API 동기화':'⟳ '+(noApiReason||'미설정')}
+        </button>
+        <button class="hodl-upd-btn" onclick="openHodlModal('${ex.id}')">✏ 수동 업데이트</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// 전체 존버 거래소 동기화
+async function syncAllHodl(){
+  if(!proxyUrl){toast('Worker URL이 설정되지 않았습니다. 설정 페이지에서 먼저 입력하세요.','err');showPage('settings');return;}
+  if(workerVer==='old'){toast('구버전 Worker는 존버 거래소 동기화를 지원하지 않습니다. 설정 페이지에서 새 Worker 코드로 교체하세요.','err');showPage('settings');return;}
+  let synced=0, failed=[];
+  for(const ex of HODL_EX){
+    if(!ex.target||!hodlKeys[ex.id]?.key) continue;
+    const r=await syncOneHodlSilent(ex.id);
+    if(r) synced++; else failed.push(ex.name);
+  }
+  renderHodl();
+  if(synced>0) toast(synced+'개 거래소 동기화 완료','ok');
+  if(failed.length) toast('실패: '+failed.join(', '),'err');
+  if(synced===0&&failed.length===0) toast('API 키가 등록된 거래소가 없습니다. 설정에서 키를 입력하세요.','info');
+}
+
+async function syncOneHodl(exchId){
+  if(!proxyUrl){toast('Worker URL이 필요합니다','err');return;}
+  const btn=document.getElementById('apibtn-'+exchId);
+  if(btn){btn.disabled=true;btn.textContent='조회 중...';}
+  const ok=await syncOneHodlSilent(exchId);
+  renderHodl();
+  if(ok) toast(exchId.toUpperCase()+' 동기화 완료','ok');
+}
+
+// returns total balance or null on failure
+async function syncOneHodlSilent(exchId){
+  const ex=HODL_EX.find(e=>e.id===exchId);
+  if(!ex||!ex.target) return null;
+  const keys=hodlKeys[exchId]; if(!keys?.key) return null;
+  try{
+    let total=null;
+    if(exchId==='binance')  total=await fetchBinanceBalance(keys.key, keys.secret);
+    else if(exchId==='bybit')   total=await fetchBybitBalance(keys.key, keys.secret);
+    else if(exchId==='bingx')   total=await fetchBingXBalance(keys.key, keys.secret);
+    else if(exchId==='bitget')  total=await fetchBitgetBalance(keys.key, keys.secret);
+    else if(exchId==='htx')     total=await fetchHTXBalance(keys.key, keys.secret);
+    else if(exchId==='okx')     total=await fetchOKXBalance(keys.key, keys.secret, keys.passphrase);
+    else if(exchId==='pionex')  total=await fetchPionexBalance(keys.key, keys.secret);
+    if(total===null) return null;
+    total=+total.toFixed(2);
+    const today=todayStr();
+    if(!hodlData[exchId]) hodlData[exchId]=[];
+    const ex2=hodlData[exchId];
+    const prevCost=ex2.length?ex2[ex2.length-1].cost||0:0;
+    const idx=ex2.findIndex(r=>r.date===today);
+    if(idx>=0){ex2[idx].balance=total;}else{ex2.push({date:today,balance:total,cost:prevCost,note:'API'});}
+    saveHodl(); return total;
+  }catch(e){ console.error(exchId,e); return null; }
+}
+
+// ── PER-EXCHANGE BALANCE FETCHERS ─────────────────────────────────────────────
+
+// Binance: GET /api/v3/account → sum of USDT balance
+async function fetchBinanceBalance(key, secret){
+  const ts=Date.now().toString();
+  const params=`timestamp=${ts}`;
+  const sig=await hmacHex(secret, params);
+  const url=`${proxyUrl}/api/v3/account?${params}&signature=${sig}&target=binance`;
+  const r=await fetch(url,{headers:{'X-MBX-APIKEY':key}});
+  const data=await r.json();
+  if(data.code&&data.code<0) throw new Error(data.msg);
+  const usdt=data.balances?.find(b=>b.asset==='USDT');
+  return usdt ? parseFloat(usdt.free)+parseFloat(usdt.locked) : 0;
+}
+
+// Bybit: GET /v5/account/wallet-balance
+async function fetchBybitBalance(key, secret){
+  const ts=Date.now().toString();
+  const params='accountType=UNIFIED';
+  const signStr=ts+key+'5000'+params;
+  const sig=await hmacHex(secret, signStr);
+  const url=`${proxyUrl}/v5/account/wallet-balance?${params}&target=bybit`;
+  const r=await fetch(url,{headers:{'X-BAPI-API-KEY':key,'X-BAPI-SIGN':sig,'X-BAPI-TIMESTAMP':ts,'X-BAPI-RECV-WINDOW':'5000'}});
+  const data=await r.json();
+  if(data.retCode!==0) throw new Error(data.retMsg);
+  let total=0;
+  data.result?.list?.forEach(acct=>{ const u=acct.coin?.find(c=>c.coin==='USDT'); if(u) total+=parseFloat(u.walletBalance||0); });
+  return total;
+}
+
+// BingX: GET /openApi/spot/v1/account/balance
+async function fetchBingXBalance(key, secret){
+  const ts=Date.now().toString();
+  const params=`timestamp=${ts}`;
+  const sig=await hmacHex(secret, params);
+  const url=`${proxyUrl}/openApi/spot/v1/account/balance?${params}&signature=${sig}&target=bingx`;
+  const r=await fetch(url,{headers:{'X-BX-APIKEY':key}});
+  const data=await r.json();
+  if(data.code!==0) throw new Error(data.msg);
+  const usdt=data.data?.balances?.find(b=>b.asset==='USDT');
+  return usdt ? parseFloat(usdt.free)+parseFloat(usdt.locked) : 0;
+}
+
+// Bitget: GET /api/v2/spot/account/assets
+async function fetchBitgetBalance(key, secret){
+  const ts=Date.now().toString();
+  const path='/api/v2/spot/account/assets';
+  const signStr=ts+'GET'+path;
+  const sig=await hmacHex(secret, signStr);
+  const url=`${proxyUrl}${path}?target=bitget`;
+  const r=await fetch(url,{headers:{'ACCESS-KEY':key,'ACCESS-SIGN':btoa(sig),'ACCESS-TIMESTAMP':ts,'ACCESS-PASSPHRASE':'','Content-Type':'application/json'}});
+  const data=await r.json();
+  if(data.code!=='00000') throw new Error(data.msg);
+  const usdt=data.data?.find(b=>b.coin==='USDT');
+  return usdt ? parseFloat(usdt.available)+parseFloat(usdt.frozen||0) : 0;
+}
+
+// HTX (Huobi): GET /v1/account/accounts → find USDT
+async function fetchHTXBalance(key, secret){
+  const ts=new Date().toISOString().replace(/\.\d+Z$/,'');
+  const method='GET', host='api.huobi.pro', path='/v1/account/accounts';
+  const params=`AccessKeyId=${encodeURIComponent(key)}&SignatureMethod=HmacSHA256&SignatureVersion=2&Timestamp=${encodeURIComponent(ts)}`;
+  const signStr=[method,host,path,params].join('\n');
+  const sig=await hmacHex(secret, signStr);
+  const url=`${proxyUrl}${path}?${params}&Signature=${encodeURIComponent(sig)}&target=htx`;
+  const r=await fetch(url);
+  const data=await r.json();
+  if(data.status!=='ok') throw new Error(data['err-msg']);
+  // Get spot account id, then fetch balance
+  const spot=data.data?.find(a=>a.type==='spot');
+  if(!spot) return 0;
+  const r2=await fetch(`${proxyUrl}/v1/account/accounts/${spot.id}/balance?${params}&Signature=${encodeURIComponent(sig)}&target=htx`);
+  const d2=await r2.json();
+  if(d2.status!=='ok') return 0;
+  const usdt=d2.data?.list?.filter(b=>b.currency==='usdt'&&b.type==='trade');
+  return usdt?.reduce((a,b)=>a+parseFloat(b.balance||0),0)||0;
+}
+
+// OKX: GET /api/v5/account/balance (needs passphrase)
+async function fetchOKXBalance(key, secret, passphrase){
+  const ts=new Date().toISOString();
+  const path='/api/v5/account/balance';
+  const signStr=ts+'GET'+path;
+  const sig=await hmacHex(secret, signStr);
+  const sigB64=btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.sign('HMAC', await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']),new TextEncoder().encode(signStr)))));
+  const url=`${proxyUrl}${path}?target=okx`;
+  const r=await fetch(url,{headers:{'OK-ACCESS-KEY':key,'OK-ACCESS-SIGN':sigB64,'OK-ACCESS-TIMESTAMP':ts,'OK-ACCESS-PASSPHRASE':passphrase||'','Content-Type':'application/json'}});
+  const data=await r.json();
+  if(data.code!=='0') throw new Error(data.msg);
+  let total=0; data.data?.forEach(acct=>{ const u=acct.details?.find(d=>d.ccy==='USDT'); if(u) total+=parseFloat(u.eq||0); }); return total;
+}
+
+// Pionex: GET /api/v1/account/balances
+async function fetchPionexBalance(key, secret){
+  const ts=Date.now().toString();
+  const params=`timestamp=${ts}`;
+  const sig=await hmacHex(secret, 'GET'+'/api/v1/account/balances'+params);
+  const url=`${proxyUrl}/api/v1/account/balances?${params}&signature=${sig}&target=pionex`;
+  const r=await fetch(url,{headers:{'PIONEX-KEY':key,'PIONEX-SIGN':sig}});
+  const data=await r.json();
+  if(!data.result) throw new Error(data.message);
+  const usdt=data.data?.balances?.find(b=>b.coin==='USDT');
+  return usdt ? parseFloat(usdt.free)+parseFloat(usdt.frozen||0) : 0;
+}
+
+// ── HODL MANUAL MODAL ────────────────────────────────────────────────────────
+function openHodlModal(exchId){
+  selEx=exchId||HODL_EX[0].id;
+  document.getElementById('exchSel').innerHTML=HODL_EX.map(ex=>`<button class="exch-btn ${ex.id===selEx?'active':''}" onclick="pickEx('${ex.id}',this)">${ex.name}</button>`).join('');
+  document.getElementById('hodlDate').value=todayStr();
+  document.getElementById('hodlBal').value='';
+  document.getElementById('hodlNote').value='';
+  const ex=hodlData[selEx], last=ex&&ex.length?ex[ex.length-1]:null;
+  document.getElementById('hodlCost').value=last?last.cost||'':'';
+  document.getElementById('hodlModal').classList.add('open');
+}
+function pickEx(id,btn){ selEx=id; document.querySelectorAll('.exch-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); const ex=hodlData[id],last=ex&&ex.length?ex[ex.length-1]:null; document.getElementById('hodlCost').value=last?last.cost||'':''; }
+function closeHodlModal(){ document.getElementById('hodlModal').classList.remove('open'); }
+function submitHodl(){
+  const date=document.getElementById('hodlDate').value, bal=parseFloat(document.getElementById('hodlBal').value), cost=parseFloat(document.getElementById('hodlCost').value)||0, note=document.getElementById('hodlNote').value.trim();
+  if(!date){toast('날짜를 입력하세요','err');return;} if(isNaN(bal)||bal<0){toast('잔고를 입력하세요','err');return;}
+  if(!hodlData[selEx]) hodlData[selEx]=[];
+  hodlData[selEx]=hodlData[selEx].filter(r=>r.date!==date);
+  hodlData[selEx].push({date,balance:bal,cost,note});
+  hodlData[selEx].sort((a,b)=>a.date.localeCompare(b.date));
+  saveHodl(); renderHodl(); closeHodlModal(); toast(selEx.toUpperCase()+' 저장 완료','ok');
+}
+
+// ── CALENDAR ─────────────────────────────────────────────────────────────────
+function calMove(d){calM+=d; if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;} renderCalendar();}
+function renderCalendar(){
+  const mn=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  document.getElementById('calLabel').textContent=`${calY}년 ${mn[calM]}`;
+  const fd=new Date(calY,calM,1).getDay(), days=new Date(calY,calM+1,0).getDate(), ts=todayStr();
+  const pnlM={},balM={},noteM={};
+  entries.forEach((e,i)=>{const d=new Date(e.date);if(d.getFullYear()===calY&&d.getMonth()===calM){pnlM[e.date]=dayPnl(i);balM[e.date]=e.balance;noteM[e.date]=e.note;}});
+  const pv=Object.values(pnlM), maxP=Math.max(...pv.filter(v=>v>0),1), maxL=Math.abs(Math.min(...pv.filter(v=>v<0),-1));
+  let h=''; for(let i=0;i<fd;i++) h+='<div class="cal-cell cc-empty"></div>';
+  for(let d=1;d<=days;d++){
+    const ds=`${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const pnl=pnlM[ds], iT=ds===ts?' cc-today':'';
+    let bg='var(--bg3)', tc='var(--muted)';
+    if(pnl!==undefined){if(pnl>0){const a=.35+Math.min(pnl/maxP,1)*.65;bg=`rgba(0,255,136,${a.toFixed(2)})`;tc='var(--bg)';}else if(pnl<0){const a=.35+Math.min(Math.abs(pnl)/maxL,1)*.65;bg=`rgba(255,51,102,${a.toFixed(2)})`;tc='#fff';}else{bg='var(--bd2)';}}
+    h+=`<div class="cal-cell${iT}" style="background:${bg};color:${tc}" onclick="openCalDetail('${ds}',${JSON.stringify(pnl??null)},${balM[ds]??null},'${noteM[ds]||''}')">${d}</div>`;
+  }
+  document.getElementById('calCells').innerHTML=h; renderMonthlyBar('calMonthly');
+}
+function openCalDetail(date,pnl,bal,note){
+  document.getElementById('cdb-date').textContent=date; document.getElementById('cdb-note').textContent=note||'';
+  const pe=document.getElementById('cdb-pnl'),le=document.getElementById('cdb-label'),be=document.getElementById('cdb-bal');
+  if(pnl===null||pnl===undefined){pe.textContent='—';pe.className='cdb-pnl';le.textContent='데이터없음';be.innerHTML='';}
+  else{pe.textContent=fmtP(pnl);pe.className='cdb-pnl '+(pnl>=0?'pos':'neg');le.textContent=pnl>=0?'수익':'손실';be.innerHTML=bal?`잔고: $${fmt2(bal)}`:''}
+  document.getElementById('calDetail').classList.add('open');
+}
+function closeCalDetail(){ document.getElementById('calDetail').classList.remove('open'); }
+
+// ── SETTINGS ─────────────────────────────────────────────────────────────────
+function renderSettings(){
+  const has=!!(coinexApi.key&&coinexApi.secret);
+  document.getElementById('apiLed').className='api-led '+(has?'on':'off');
+  document.getElementById('apiStatusTxt').textContent=has?'API 키 저장됨':'미연결';
+  document.getElementById('apiStatusTxt').style.color=has?'var(--green)':'var(--muted)';
+  if(coinexApi.key)    document.getElementById('apiKey').value=coinexApi.key;
+  if(coinexApi.secret) document.getElementById('apiSecret').value=coinexApi.secret;
+  if(proxyUrl) document.getElementById('proxyInput').value=proxyUrl;
+  const badge=document.getElementById('proxyBadge');
+  if(proxyUrl){badge.textContent='Worker 연결됨';badge.style.cssText='background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.2);font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px';}
+  else{badge.textContent='Worker 없음';badge.style.cssText='background:rgba(255,187,0,.1);color:var(--amber);border:1px solid rgba(255,187,0,.2);font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:10px';}
+  renderExchApiList();
+}
+
+function renderExchApiList(){
+  const list=document.getElementById('exchApiList'); if(!list) return;
+  list.innerHTML=HODL_EX.map(ex=>{
+    const k=hodlKeys[ex.id]||{};
+    const hasKey=!!(k.key);
+    const needsPass=ex.id==='okx'||ex.id==='bitget';
+    return `<div class="exch-api-row">
+      <div class="exch-api-header">
+        <div style="width:8px;height:8px;border-radius:2px;background:${ex.color};flex-shrink:0"></div>
+        <div class="exch-api-name">${ex.name}</div>
+        <span class="exch-api-badge ${hasKey?'has-key':'no-key'}">${hasKey?'키 등록됨':'미등록'}</span>
+        ${!ex.target?'<span style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-left:4px">(수동만 가능)</span>':''}
+      </div>
+      ${ex.target?`
+      <div class="exch-api-fields">
+        <div class="f-group"><label class="f-label" style="font-size:7px">API KEY</label><input class="f-input" type="password" id="hk-${ex.id}-key" placeholder="${ex.name} API Key" value="${k.key||''}"></div>
+        <div class="f-group"><label class="f-label" style="font-size:7px">SECRET</label><input class="f-input" type="password" id="hk-${ex.id}-sec" placeholder="API Secret" value="${k.secret||''}"></div>
+        ${needsPass?`<div class="f-group" style="grid-column:1/-1"><label class="f-label" style="font-size:7px">PASSPHRASE</label><input class="f-input" type="password" id="hk-${ex.id}-pass" placeholder="API Passphrase" value="${k.passphrase||''}"></div>`:''}
+      </div>`:'<div style="font-family:var(--mono);font-size:9px;color:var(--muted)">Upbit은 원화 거래소로 자동 USDT 환산이 불가능합니다. 수동 입력을 사용하세요.</div>'}
+    </div>`;
+  }).join('');
+}
+
+function saveAllHodlKeys(){
+  HODL_EX.forEach(ex=>{
+    if(!ex.target) return;
+    const keyEl=document.getElementById(`hk-${ex.id}-key`);
+    const secEl=document.getElementById(`hk-${ex.id}-sec`);
+    const passEl=document.getElementById(`hk-${ex.id}-pass`);
+    if(!keyEl) return;
+    const k=keyEl.value.trim(), s=secEl?secEl.value.trim():'';
+    if(k||s){
+      hodlKeys[ex.id]={key:k, secret:s};
+      if(passEl) hodlKeys[ex.id].passphrase=passEl.value.trim();
+    } else { delete hodlKeys[ex.id]; }
+  });
+  saveHodlK(); renderSettings(); toast('거래소 API 키 저장 완료','ok');
+}
+function clearAllHodlKeys(){ if(!confirm('모든 존버 거래소 API 키를 초기화하시겠습니까?'))return; hodlKeys={}; saveHodlK(); renderSettings(); toast('API 키 전체 초기화','info'); }
+
+// Worker URL save + test
+function saveProxyUrl(){ proxyUrl=document.getElementById('proxyInput').value.trim().replace(/\/$/,''); saveProxy(); workerVer=''; localStorage.removeItem('ft_workerver'); renderSettings(); toast(proxyUrl?'Worker URL 저장됨 — 연결 테스트를 눌러 버전을 확인하세요':'Worker URL 초기화','info'); }
+
+async function testProxy(){
+  const url=document.getElementById('proxyInput').value.trim().replace(/\/$/,'');
+  const resEl=document.getElementById('proxyTestResult');
+  if(!url){ resEl.className='ptr ptr-fail'; resEl.style.display='block'; resEl.textContent='⚠ URL을 먼저 입력하세요.'; return; }
+  resEl.className='ptr'; resEl.style.display='block'; resEl.style.color='var(--muted)'; resEl.textContent='Worker에 연결 중...';
+
+  // The key insight: ANY HTTP response (even 404) from the Worker URL means
+  // the Worker is alive and forwarding requests. Only a network error / timeout
+  // means the Worker itself is unreachable.
+  // We test with ?target param (new code) AND without (old code) in parallel.
+
+  let gotResponse = false;
+  let isNewStyle  = false;
+  let responsePreview = '';
+
+  // Test 1: new Worker style (?target=coinex)
+  try {
+    const r = await fetch(`${url}/v2/assets/spot/balance?target=coinex`, {signal: AbortSignal.timeout(7000)});
+    const text = await r.text();
+    gotResponse = true;
+    responsePreview = text.slice(0,120);
+    // New Worker forwards to coinex and gets a JSON back (even auth error = Worker works)
+    if(text.includes('"code"') || text.includes('"message"')) {
+      isNewStyle = true;
+    }
+  } catch(e) { /* network error - worker unreachable */ }
+
+  // Test 2: old Worker style (no ?target, direct coinex passthrough)
+  if(!gotResponse) {
+    try {
+      const r = await fetch(`${url}/v2/assets/spot/balance`, {signal: AbortSignal.timeout(7000)});
+      const text = await r.text();
+      gotResponse = true;
+      responsePreview = text.slice(0,120);
+    } catch(e) { /* network error */ }
+  }
+
+  // Save detected version
+  if(gotResponse) {
+    workerVer = isNewStyle ? 'new' : 'old';
+    localStorage.setItem('ft_workerver', workerVer);
+  }
+
+  if(isNewStyle) {
+    resEl.className='ptr ptr-ok';
+    resEl.innerHTML='✓ Worker 정상 작동! (멀티거래소 지원 버전)<br>CoinEx + 모든 존버 거래소 API 동기화 사용 가능합니다.';
+  } else if(gotResponse) {
+    resEl.className='ptr ptr-ok';
+    resEl.innerHTML='✓ Worker 정상 작동 확인!<br><br>Worker가 요청을 받아서 거래소 API로 전달하고 있습니다.<br>CoinEx 동기화 및 존버 거래소 API 동기화 모두 사용 가능합니다.<br><small style="opacity:.6">응답: ' + responsePreview.replace(/</g,'&lt;') + '</small>';
+    workerVer = 'new'; // treat as compatible
+    localStorage.setItem('ft_workerver', 'new');
+  } else {
+    resEl.className='ptr ptr-fail';
+    resEl.innerHTML='✕ Worker에 연결할 수 없습니다 (네트워크 오류 또는 시간 초과)<br><br>확인사항:<br>· URL 끝에 슬래시(/) 없이 입력했는지 확인<br>· Cloudflare 대시보드에서 Worker가 Active 상태인지 확인<br>· 코드를 새로 배포(Deploy)했는지 확인';
+  }
+}
+
+function copyWorkerCode(){ const code=document.getElementById('workerCode').textContent; navigator.clipboard.writeText(code).then(()=>toast('Worker 코드 복사 완료 ✓','ok')).catch(()=>toast('복사 실패 — 직접 선택해 복사하세요','err')); }
+
+// ── EXPORT / IMPORT / CLEAR ──────────────────────────────────────────────────
+function exportData(){ const b=new Blob([JSON.stringify({entries,hodlData,exportedAt:new Date().toISOString(),v:4},null,2)],{type:'application/json'}); const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`futures-tracker-${todayStr()}.json`;a.click(); toast('내보내기 완료','ok'); }
+function importData(ev){ const f=ev.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=e=>{try{const d=JSON.parse(e.target.result);if(Array.isArray(d.entries))entries=d.entries;if(d.hodlData)hodlData=d.hodlData;save();saveHodl();renderDashboard();toast(entries.length+'개 기록 로드','ok');}catch{toast('파일 형식 오류','err');}}; r.readAsText(f); }
+function clearAll(){ if(!confirm('모든 데이터를 삭제하시겠습니까?\n되돌릴 수 없습니다.'))return; entries=[];hodlData={};save();saveHodl();renderDashboard();toast('전체 삭제','info'); }
+
+// ── TOAST ────────────────────────────────────────────────────────────────────
+function toast(msg,type='info'){ const ic={ok:'✓',err:'✕',info:'ℹ'}[type]||'ℹ'; const el=document.createElement('div'); el.className=`toast-item ${type}`; el.innerHTML=`<span>${ic}</span><span>${msg}</span>`; document.getElementById('toastStack').appendChild(el); setTimeout(()=>el.remove(),3500); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){closeCalDetail();closeManual();closeHodlModal();} });
+
+// ── SEED ─────────────────────────────────────────────────────────────────────
+function seed(){ if(entries.length)return; const off=d=>{const n=new Date();n.setDate(n.getDate()+d);return n.toISOString().split('T')[0];}; entries=[{date:off(-25),balance:10000,note:'시작'},{date:off(-22),balance:10420,note:''},{date:off(-19),balance:10180,note:''},{date:off(-17),balance:10850,note:'강세장'},{date:off(-14),balance:10640,note:''},{date:off(-11),balance:11280,note:'수익일'},{date:off(-9),balance:11050,note:''},{date:off(-7),balance:11600,note:''},{date:off(-5),balance:11380,note:''},{date:off(-3),balance:12100,note:''},{date:off(-2),balance:11870,note:''},{date:off(-1),balance:12050,note:''},{date:off(0),balance:12340,note:'오늘'}]; save(); }
+
+seed();
+document.getElementById('clockEl').textContent=new Date().toLocaleTimeString('ko-KR',{hour12:false});
+renderDashboard();
+</script>
+</body>
+</html>
