@@ -1201,19 +1201,19 @@ async function fetchBinanceBalance(key, secret) {
 
   // 1. Total Spot, Margin, Funding balance in USDT
   const qs = `timestamp=${ts}`;
-  const res = await fetch(proxy(\'/sapi/v1/asset/get-user-asset\', qs), { headers: { \'X-MBX-APIKEY\': key } });
+  const res = await fetch(proxy('/sapi/v1/asset/get-user-asset', qs), { headers: { 'X-MBX-APIKEY': key } });
   const assets = await res.json();
   let total = assets.reduce((sum, a) => sum + parseFloat(a.btcValuation), 0) * (await getBtcPrice());
 
   // 2. USDT-M Futures
   const qs2 = `timestamp=${ts}`;
-  const fRes = await fetch(proxy(\'/fapi/v2/balance\', qs2), { headers: { \'X-MBX-APIKEY\': key } });
+  const fRes = await fetch(proxy('/fapi/v2/balance', qs2), { headers: { 'X-MBX-APIKEY': key } });
   const fBal = await fRes.json();
   total += fBal.reduce((sum, a) => sum + parseFloat(a.balance), 0);
 
   // 3. COIN-M Futures
   const qs3 = `timestamp=${ts}`;
-  const cRes = await fetch(proxy(\'/dapi/v1/balance\', qs3), { headers: { \'X-MBX-APIKEY\': key } });
+  const cRes = await fetch(proxy('/dapi/v1/balance', qs3), { headers: { 'X-MBX-APIKEY': key } });
   const cBal = await cRes.json();
   total += cBal.reduce((sum, a) => sum + parseFloat(a.balance), 0) * (await getBtcPrice());
 
@@ -1221,7 +1221,7 @@ async function fetchBinanceBalance(key, secret) {
 }
 
 async function getBtcPrice() {
-    const r = await fetch(\'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT\');
+    const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
     const d = await r.json();
     return parseFloat(d.price);
 }
@@ -1229,12 +1229,12 @@ async function getBtcPrice() {
 // Bybit: GET /v5/account/wallet-balance
 async function fetchBybitBalance(key, secret) {
     const ts = Date.now().toString();
-    const recvWindow = \'5000\';
-    const params = \'accountType=UNIFIED\';
+    const recvWindow = '5000';
+    const params = 'accountType=UNIFIED';
     const signStr = ts + key + recvWindow + params;
     const sig = await hmacHex(secret, signStr);
     const url = `${proxyUrl}/v5/account/wallet-balance?${params}&target=bybit`;
-    const r = await fetch(url, { headers: { \'X-BAPI-API-KEY\': key, \'X-BAPI-SIGN\': sig, \'X-BAPI-TIMESTAMP\': ts, \'X-BAPI-RECV-WINDOW\': recvWindow } });
+    const r = await fetch(url, { headers: { 'X-BAPI-API-KEY': key, 'X-BAPI-SIGN': sig, 'X-BAPI-TIMESTAMP': ts, 'X-BAPI-RECV-WINDOW': recvWindow } });
     const data = await r.json();
     if (data.retCode !== 0) throw new Error(data.retMsg);
 
@@ -1262,17 +1262,17 @@ async function fetchBingXBalance(key, secret){
 // Bitget: GET /api/v2/spot/account/assets
 async function fetchBitgetBalance(key, secret, passphrase) {
     const ts = Date.now().toString();
-    const proxy = async (path, method = \'GET\') => {
+    const proxy = async (path, method = 'GET') => {
         const signStr = ts + method + path;
         const sig = await hmacHex(secret, signStr);
         return {
             url: `${proxyUrl}${path}?target=bitget`,
             headers: {
-                \'ACCESS-KEY\': key,
-                \'ACCESS-SIGN\': btoa(sig),
-                \'ACCESS-TIMESTAMP\': ts,
-                \'ACCESS-PASSPHRASE\': passphrase || \'\',
-                \'Content-Type\': \'application/json\'
+                'ACCESS-KEY': key,
+                'ACCESS-SIGN': btoa(sig),
+                'ACCESS-TIMESTAMP': ts,
+                'ACCESS-PASSPHRASE': passphrase || '',
+                'Content-Type': 'application/json'
             }
         };
     };
@@ -1280,21 +1280,21 @@ async function fetchBitgetBalance(key, secret, passphrase) {
     let total = 0;
     try {
         // 1. Spot Assets
-        const spot = await proxy(\'/api/v2/spot/account/assets\');
+        const spot = await proxy('/api/v2/spot/account/assets');
         const r1 = await fetch(spot.url, { headers: spot.headers });
         const d1 = await r1.json();
-        if (d1.code === \'00000\') {
-            d1.data?.forEach(a => { if (a.coin === \'USDT\') total += parseFloat(a.available) + parseFloat(a.frozen || 0); });
+        if (d1.code === '00000') {
+            d1.data?.forEach(a => { if (a.coin === 'USDT') total += parseFloat(a.available) + parseFloat(a.frozen || 0); });
         }
 
         // 2. Futures Assets (USDT-M)
-        const fut = await proxy(\'/api/v2/mix/account/accounts?productType=usdt-futures\');
+        const fut = await proxy('/api/v2/mix/account/accounts?productType=usdt-futures');
         const r2 = await fetch(fut.url, { headers: fut.headers });
         const d2 = await r2.json();
-        if (d2.code === \'00000\') {
+        if (d2.code === '00000') {
             d2.data?.forEach(a => { total += parseFloat(a.equity || 0); });
         }
-    } catch (e) { console.error(\'Bitget error:\', e); }
+    } catch (e) { console.error('Bitget error:', e); }
 
     return total;
 }
@@ -1323,14 +1323,14 @@ async function fetchHTXBalance(key, secret){
 // OKX: GET /api/v5/account/balance (needs passphrase)
 async function fetchOKXBalance(key, secret, passphrase) {
     const ts = new Date().toISOString();
-    const path = \'/api/v5/account/balance\';
-    const signStr = ts + \'GET\' + path;
+    const path = '/api/v5/account/balance';
+    const signStr = ts + 'GET' + path;
     const sig = await hmacHex(secret, signStr);
-    const sigB64 = btoa(String.fromCharCode.apply(null, new Uint8Array(await crypto.subtle.sign(\'HMAC\', await crypto.subtle.importKey(\'raw\', new TextEncoder().encode(secret), { name: \'HMAC\', hash: \'SHA-256\' }, false, [\'sign\']), new TextEncoder().encode(signStr)))));
+    const sigB64 = btoa(String.fromCharCode.apply(null, new Uint8Array(await crypto.subtle.sign('HMAC', await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']), new TextEncoder().encode(signStr)))));
     const url = `${proxyUrl}${path}?target=okx`;
-    const r = await fetch(url, { headers: { \'OK-ACCESS-KEY\': key, \'OK-ACCESS-SIGN\': sigB64, \'OK-ACCESS-TIMESTAMP\': ts, \'OK-ACCESS-PASSPHRASE\': passphrase || \'\' } });
+    const r = await fetch(url, { headers: { 'OK-ACCESS-KEY': key, 'OK-ACCESS-SIGN': sigB64, 'OK-ACCESS-TIMESTAMP': ts, 'OK-ACCESS-PASSPHRASE': passphrase || '' } });
     const data = await r.json();
-    if (data.code !== \'0\') throw new Error(data.msg);
+    if (data.code !== '0') throw new Error(data.msg);
 
     let total = 0;
     data.data?.forEach(acct => {
