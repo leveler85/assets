@@ -700,7 +700,7 @@ const saveHodlK  = () => localStorage.setItem('ft_hodlkeys', JSON.stringify(hodl
 const saveProxy  = () => localStorage.setItem('ft_proxy',    proxyUrl);
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
-const todayStr = () => { const d=new Date(); d.setMinutes(d.getMinutes()+d.getTimezoneOffset()+540); return d.toISOString().split('T')[0]; };
+const todayStr = () => { const d=new Date(new Date().getTime()+9*3600*1000); return d.toISOString().split('T')[0]; };
 const fmt2  = n => (+n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtP  = n => (n>=0?'+$':'-$') + fmt2(Math.abs(n));
 const colV  = n => n>0?'var(--green)':n<0?'var(--red)':'var(--muted)';
@@ -814,7 +814,7 @@ function renderKpi() {
   } else setK('k-yest','—','col-white','k-yest-sub','이전 기록없음');
 
   // 최근 7일 PNL (고정 7일 — 요일 무관)
-  const kstNow=new Date(); kstNow.setMinutes(kstNow.getMinutes()+kstNow.getTimezoneOffset()+540);
+  const kstNow=new Date(new Date().getTime()+9*3600*1000);
   const d7=new Date(kstNow); d7.setDate(kstNow.getDate()-7);
   const d7str=d7.toISOString().split('T')[0];
   const w7=entries.filter(e=>e.date>d7str);
@@ -896,7 +896,7 @@ function renderMonthlyBar(cid){
 function renderWeeklyTable(){
   const el=document.getElementById('weeklyTable'); if(!el||!entries.length) return;
   // 최근 8주 계산 (월요일 기준)
-  const kstNow=new Date(); kstNow.setMinutes(kstNow.getMinutes()+kstNow.getTimezoneOffset()+540);
+  const kstNow=new Date(new Date().getTime()+9*3600*1000);
   const weeks=[];
   for(let w=0;w<8;w++){
     const end=new Date(kstNow); end.setDate(kstNow.getDate()-w*7);
@@ -1447,7 +1447,7 @@ function toast(msg,type='info'){ const ic={ok:'✓',err:'✕',info:'ℹ'}[type]|
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){closeCalDetail();closeManual();closeHodlModal();} });
 
 // ── SEED ─────────────────────────────────────────────────────────────────────
-function seed(){ if(entries.length)return; const off=d=>{const n=new Date();n.setDate(n.getDate()+d);n.setMinutes(n.getMinutes()+n.getTimezoneOffset()+540);return n.toISOString().split('T')[0];}; entries=[{date:off(-25),balance:10000,note:'시작'},{date:off(-22),balance:10420,note:''},{date:off(-19),balance:10180,note:''},{date:off(-17),balance:10850,note:'강세장'},{date:off(-14),balance:10640,note:''},{date:off(-11),balance:11280,note:'수익일'},{date:off(-9),balance:11050,note:''},{date:off(-7),balance:11600,note:''},{date:off(-5),balance:11380,note:''},{date:off(-3),balance:12100,note:''},{date:off(-2),balance:11870,note:''},{date:off(-1),balance:12050,note:''},{date:off(0),balance:12340,note:'오늘'}]; save(); }
+function seed(){ if(entries.length)return; const off=d=>{const n=new Date(new Date().getTime()+9*3600*1000);n.setUTCDate(n.getUTCDate()+d);return n.toISOString().split('T')[0];}; entries=[{date:off(-25),balance:10000,note:'시작'},{date:off(-22),balance:10420,note:''},{date:off(-19),balance:10180,note:''},{date:off(-17),balance:10850,note:'강세장'},{date:off(-14),balance:10640,note:''},{date:off(-11),balance:11280,note:'수익일'},{date:off(-9),balance:11050,note:''},{date:off(-7),balance:11600,note:''},{date:off(-5),balance:11380,note:''},{date:off(-3),balance:12100,note:''},{date:off(-2),balance:11870,note:''},{date:off(-1),balance:12050,note:''},{date:off(0),balance:12340,note:'오늘'}]; save(); }
 
 seed();
 
@@ -1456,7 +1456,7 @@ seed();
 function scheduleAutoSync() {
   const now = new Date();
   // KST 현재 시각
-  const kstNow = new Date(now.getTime() + (now.getTimezoneOffset() + 540) * 60000);
+  const kstNow = new Date(now.getTime() + 9*3600*1000);
   // 오늘 KST 자정 + 5초 (정확히 00:00:05에 실행)
   const kstMidnight = new Date(kstNow);
   kstMidnight.setHours(0, 0, 5, 0);
@@ -1467,7 +1467,7 @@ function scheduleAutoSync() {
   // 다음 자정까지 남은 시간 표시 (사이드바 footer에)
   function updateCountdown() {
     const n = new Date();
-    const kn = new Date(n.getTime() + (n.getTimezoneOffset() + 540) * 60000);
+    const kn = new Date(n.getTime() + 9*3600*1000);
     const km = new Date(kn); km.setHours(0,0,5,0);
     if(kn >= km) km.setDate(km.getDate()+1);
     const diff = km - kn;
