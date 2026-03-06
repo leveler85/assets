@@ -246,7 +246,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
       onkeydown="if(event.key==='Enter')checkLock()">
     <button class="lock-btn" onclick="checkLock()">잠금 해제</button>
     <div class="lock-err" id="lockErr"></div>
-    <div class="lock-hint">비밀번호를 잊으셨나요? 설정에서 변경 가능합니다</div>
+    <div class="lock-hint">기본 비밀번호: 1234 · 설정에서 변경 가능</div>
   </div>
 </div>
 
@@ -281,6 +281,11 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
     <div class="sbf-lbl">COINEX BALANCE</div>
     <div class="sbf-val" id="sfBal">$0</div>
     <div class="sbf-pnl" id="sfPnl">—</div>
+    <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)">
+      <div style="font-family:var(--mono);font-size:7px;letter-spacing:2px;color:var(--muted);margin-bottom:3px">⏰ 자정 자동동기화</div>
+      <div id="autoSyncCountdown" style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--blue);letter-spacing:2px">--:--:--</div>
+      <div style="font-family:var(--mono);font-size:7px;color:rgba(126,170,204,.4);margin-top:2px;letter-spacing:1px">KST 00:00 기준</div>
+    </div>
   </div>
 </nav>
 
@@ -291,12 +296,12 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
   <div class="pg-head">
     <div><div class="pg-title">COIN<em>EX</em> DASHBOARD</div><div class="pg-sub">데일리 트레이딩 자산 트래킹</div></div>
     <div class="pg-actions">
-      <button class="btn btn-ghost" id="baselineBtn" onclick="openBaselineModal()">📍 기준시점</button>
+      <button class="btn btn-ghost" onclick="openBaselineModal()">📍 기준시점</button>
       <button class="btn btn-sky" onclick="triggerCoinexSync()">⟳ API 동기화</button>
       <button class="btn btn-primary" onclick="openManual()">＋ 수동 입력</button>
     </div>
   </div>
-  <div id="baselineBanner" style="display:none;margin-bottom:12px;padding:8px 14px;background:rgba(255,187,0,.07);border:1px solid rgba(255,187,0,.25);border-radius:6px;font-family:var(--mono);font-size:10px;color:var(--amber);display:flex;align-items:center;justify-content:space-between;gap:10px">
+  <div id="baselineBanner" style="display:none;margin-bottom:12px;padding:8px 14px;background:rgba(255,187,0,.07);border:1px solid rgba(255,187,0,.25);border-radius:6px;font-family:var(--mono);font-size:10px;color:var(--amber);align-items:center;justify-content:space-between;gap:10px">
     <span>📍 기준시점: <strong id="baselineBannerDate">—</strong> 이후부터 손익 계산 중</span>
     <button onclick="clearBaseline()" style="background:none;border:none;color:rgba(255,187,0,.6);cursor:pointer;font-size:11px;font-family:var(--mono)">✕ 초기화</button>
   </div>
@@ -507,14 +512,13 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
     </div>
 
     <div class="divider"></div>
-    <!-- 비밀번호 변경 -->
     <div class="proxy-card" style="margin-bottom:20px">
       <div class="pc-title">④ 비밀번호 변경</div>
       <div class="form-block" style="margin-bottom:12px;gap:12px">
-        <div class="f-group"><label class="f-label">새 비밀번호</label><input class="f-input" type="password" id="newPw1" placeholder="새 비밀번호 입력"></div>
+        <div class="f-group"><label class="f-label">새 비밀번호</label><input class="f-input" type="password" id="newPw1" placeholder="새 비밀번호 입력 (4자 이상)"></div>
         <div class="f-group"><label class="f-label">비밀번호 확인</label><input class="f-input" type="password" id="newPw2" placeholder="새 비밀번호 재입력"></div>
       </div>
-      <div class="f-note" style="margin-bottom:12px">⚠ 비밀번호는 이 기기의 localStorage에만 저장됩니다<br>기본 비밀번호: <strong style="color:var(--amber)">1234</strong> (최초 접속 시)</div>
+      <div class="f-note" style="margin-bottom:12px">⚠ 비밀번호는 이 기기 localStorage에만 저장됩니다<br>기본 비밀번호: <strong style="color:var(--amber)">1234</strong></div>
       <button class="btn btn-primary" style="width:100%" onclick="changePw()">비밀번호 변경</button>
     </div>
     <div class="divider"></div>
@@ -572,9 +576,9 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
     <div class="modal-head"><div class="modal-title">📍 기준시점 설정</div><button class="modal-x" onclick="closeBaselineModal()">×</button></div>
     <div class="modal-body">
       <div style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.9;margin-bottom:16px;padding:12px;background:rgba(255,187,0,.05);border:1px solid rgba(255,187,0,.15);border-radius:6px">
-        ℹ 선택한 날짜를 <strong style="color:var(--amber)">기준 잔고(=0)</strong>로 설정합니다.<br>
+        ℹ 선택한 날짜를 <strong style="color:var(--amber)">기준(±0)</strong>으로 설정합니다.<br>
         그 다음날부터 손익이 계산됩니다.<br>
-        API 동기화로 테스트 데이터가 들어간 경우 실제 거래 시작일을 선택하세요.
+        API 테스트 데이터가 섞인 경우 실제 거래 시작일을 선택하세요.
       </div>
       <div class="form-block" style="margin-bottom:12px;gap:12px">
         <div class="f-group"><label class="f-label">기준 날짜 선택</label><input class="f-input" type="date" id="baselineInput" oninput="updateBaselinePreview()"></div>
@@ -601,24 +605,21 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 <script>
 'use strict';
 
-// ── LOCK / PASSWORD ──────────────────────────────────────────────────────────
+// ── LOCK / PASSWORD ─────────────────────────────────────────────────────────
 (function initLock(){
-  const stored = localStorage.getItem('ft_pw') || '1234';
-  const session = sessionStorage.getItem('ft_unlocked');
-  if(session === '1'){
+  const session=sessionStorage.getItem('ft_unlocked');
+  if(session==='1'){
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('appShell').style.display='';
     return;
   }
-  // show lock screen, focus input
-  setTimeout(()=>{ const el=document.getElementById('lockPw'); if(el) el.focus(); }, 100);
+  setTimeout(()=>{ const el=document.getElementById('lockPw'); if(el) el.focus(); },100);
 })();
-
 function checkLock(){
-  const stored = localStorage.getItem('ft_pw') || '1234';
-  const val = document.getElementById('lockPw').value;
-  const errEl = document.getElementById('lockErr');
-  if(val === stored){
+  const stored=localStorage.getItem('ft_pw')||'1234';
+  const val=document.getElementById('lockPw').value;
+  const errEl=document.getElementById('lockErr');
+  if(val===stored){
     sessionStorage.setItem('ft_unlocked','1');
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('appShell').style.display='';
@@ -627,10 +628,9 @@ function checkLock(){
     const inp=document.getElementById('lockPw');
     inp.classList.add('err'); inp.value='';
     errEl.textContent='비밀번호가 틀렸습니다';
-    setTimeout(()=>{ inp.classList.remove('err'); inp.focus(); }, 400);
+    setTimeout(()=>{ inp.classList.remove('err'); inp.focus(); },400);
   }
 }
-
 function changePw(){
   const p1=document.getElementById('newPw1').value;
   const p2=document.getElementById('newPw2').value;
@@ -665,7 +665,7 @@ let hodlKeys  = JSON.parse(localStorage.getItem('ft_hodlkeys') || '{}');
 // hodlKeys: { binance: {key:'', secret:''}, ... }
 let proxyUrl  = localStorage.getItem('ft_proxy') || '';
 let workerVer = localStorage.getItem('ft_workerver') || ''; // 'old'|'new'|''
-let baselineDate = localStorage.getItem('ft_baseline') || ''; // 기준시점 날짜
+let baselineDate = localStorage.getItem('ft_baseline') || ''; // 기준시점
 let calY = new Date().getFullYear(), calM = new Date().getMonth();
 let chartTab = 'bal', charts = {}, selEx = HODL_EX[0].id;
 
@@ -676,12 +676,12 @@ const saveHodlK  = () => localStorage.setItem('ft_hodlkeys', JSON.stringify(hodl
 const saveProxy  = () => localStorage.setItem('ft_proxy',    proxyUrl);
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
-const todayStr = () => new Date().toISOString().split('T')[0];
+const todayStr = () => { const d=new Date(); d.setMinutes(d.getMinutes()+d.getTimezoneOffset()+540); return d.toISOString().split('T')[0]; };
 const fmt2  = n => (+n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtP  = n => (n>=0?'+$':'-$') + fmt2(Math.abs(n));
 const colV  = n => n>0?'var(--green)':n<0?'var(--red)':'var(--muted)';
 const dayPnl= i => { if(i<=0) return 0; if(baselineDate && entries[i].date<=baselineDate) return 0; return entries[i].balance - entries[i-1].balance; };
-const getBase = () => { if(baselineDate && entries.length) { const bl=entries.find(e=>e.date===baselineDate); if(bl) return bl.balance; } return entries.length ? entries[0].balance : 0; };
+const getBase = () => { if(baselineDate && entries.length){ const bl=entries.find(e=>e.date===baselineDate); if(bl) return bl.balance; } return entries.length ? entries[0].balance : 0; };
 
 // HMAC-SHA256 helper
 async function hmacHex(secret, msg) {
@@ -712,7 +712,7 @@ function updateSidebar() {
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
 function renderDashboard() { updateBaselineBanner(); renderKpi(); renderDayList(); renderMainChart(); renderDailyBar(); renderMonthlyBar('monthlyBar'); updateSidebar(); }
 
-// ── BASELINE (기준시점) ────────────────────────────────────────────────────────
+// ── BASELINE (기준시점) ───────────────────────────────────────────────────────
 function openBaselineModal(){
   const inp=document.getElementById('baselineInput');
   inp.value=baselineDate||todayStr();
@@ -728,7 +728,7 @@ function updateBaselinePreview(){
   if(bl){
     const after=entries.filter(e=>e.date>val);
     prev.style.display='block';
-    prev.innerHTML=`기준 잔고: <strong style="color:var(--amber)">$${fmt2(bl.balance)}</strong>&nbsp;&nbsp;이후 기록: <strong style="color:#fff">${after.length}일</strong>`;
+    prev.innerHTML='기준 잔고: <strong style="color:var(--amber)">$'+fmt2(bl.balance)+'</strong> &nbsp; 이후 기록: <strong style="color:#fff">'+after.length+'일</strong>';
   } else {
     prev.style.display='block';
     prev.innerHTML='<span style="color:var(--red)">해당 날짜의 기록이 없습니다. 기록이 있는 날짜를 선택하세요.</span>';
@@ -740,18 +740,13 @@ function applyBaseline(){
   const bl=entries.find(e=>e.date===val);
   if(!bl){toast('해당 날짜의 잔고 기록이 없습니다','err');return;}
   baselineDate=val; localStorage.setItem('ft_baseline',baselineDate);
-  closeBaselineModal(); renderDashboard(); toast('기준시점 설정 완료: '+baselineDate,'ok');
+  closeBaselineModal(); renderDashboard(); toast('기준시점 설정: '+baselineDate,'ok');
 }
-function clearBaseline(){
-  baselineDate=''; localStorage.removeItem('ft_baseline'); renderDashboard(); toast('기준시점 초기화','info');
-}
+function clearBaseline(){ baselineDate=''; localStorage.removeItem('ft_baseline'); renderDashboard(); toast('기준시점 초기화','info'); }
 function updateBaselineBanner(){
-  const banner=document.getElementById('baselineBanner');
-  if(!banner) return;
-  if(baselineDate){
-    banner.style.display='flex';
-    document.getElementById('baselineBannerDate').textContent=baselineDate;
-  } else { banner.style.display='none'; }
+  const banner=document.getElementById('baselineBanner'); if(!banner) return;
+  if(baselineDate){ banner.style.display='flex'; document.getElementById('baselineBannerDate').textContent=baselineDate; }
+  else { banner.style.display='none'; }
 }
 
 function renderKpi() {
@@ -770,7 +765,7 @@ function renderKpi() {
   if(entries.length>=2){ const dp=dayPnl(entries.length-1), pv=entries[entries.length-2]; setK('k-yest',fmtP(dp),dp>=0?'col-green':'col-red','k-yest-sub','$'+fmt2(pv.balance)); }
   else setK('k-yest','—','col-white','k-yest-sub','이전 기록없음');
   const now=new Date(), ws=new Date(now); ws.setDate(now.getDate()-now.getDay());
-  const wsStr=ws.toISOString().split('T')[0], we=entries.filter(e=>e.date>=wsStr);
+  const wsStr=(()=>{ const d=new Date(ws); d.setMinutes(d.getMinutes()+d.getTimezoneOffset()+540); return d.toISOString().split('T')[0]; })(), we=entries.filter(e=>e.date>=wsStr);
   if(we.length){ const wr=entries.filter(e=>e.date<wsStr), rb=wr.length?wr[wr.length-1].balance:we[0].balance, wp=we[we.length-1].balance-rb; setK('k-week',fmtP(wp),wp>=0?'col-green':'col-red','k-week-sub',we.length+'일'); }
   else setK('k-week','—','col-white','k-week-sub','이번주 기록없음');
   const ms=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`, me=entries.filter(e=>e.date>=ms);
@@ -871,13 +866,23 @@ async function fetchCoinexBalance(showInPage){
       toast('CoinEx API 오류: '+data.message,'err'); return;
     }
     const items=Array.isArray(data.data)?data.data:[data.data];
-    // equity = available + frozen + unrealized_pnl (Total Equity)
+    // Total Equity = available + frozen + margin (CoinEx 공식 문서 기준)
+    // margin 필드 = 포지션 증거금 (unrealized_pnl 이미 포함됨)
     let total=0; items.forEach(it=>{
-      const eq=parseFloat(it.equity||0);
-      if(eq>0){ total+=eq; }
-      else { total+=parseFloat(it.available||0)+parseFloat(it.frozen||0)+parseFloat(it.unrealized_pnl||0); }
+      const av=parseFloat(it.available||0);
+      const fr=parseFloat(it.frozen||0);
+      const mg=parseFloat(it.margin||0);
+      total += av + fr + mg;
     }); total=+total.toFixed(2);
-    if(showInPage&&resEl){resEl.style.display='block';resEl.innerHTML=`<div style="color:var(--muted);font-size:9px;letter-spacing:2px;margin-bottom:4px">선물 계좌 총 잔고</div><div class="big">$${fmt2(total)}</div><div style="color:var(--muted);font-size:9px;margin-top:6px">${todayStr()} 기준 저장</div>`;}
+    if(showInPage&&resEl){
+      // 상세 필드 디버그 표시
+      const dbg=items.map(it=>{
+        const av=parseFloat(it.available||0), fr=parseFloat(it.frozen||0), mg=parseFloat(it.margin||0), up=parseFloat(it.unrealized_pnl||0);
+        return `<div style="font-size:9px;color:var(--muted);margin-top:6px;line-height:1.8">${it.ccy||'USDT'} · available: $${fmt2(av)} · frozen: $${fmt2(fr)} · margin: $${fmt2(mg)} · upnl: $${fmt2(up)}</div>`;
+      }).join('');
+      resEl.style.display='block';
+      resEl.innerHTML=`<div style="color:var(--muted);font-size:9px;letter-spacing:2px;margin-bottom:4px">선물 계좌 TOTAL EQUITY</div><div class="big">$${fmt2(total)}</div><div style="color:var(--muted);font-size:9px;margin-top:4px">= available + frozen + margin${dbg}</div><div style="color:var(--muted);font-size:9px;margin-top:6px">${todayStr()} 기준 저장</div>`;
+    }
     const today=todayStr(), idx=entries.findIndex(e=>e.date===today);
     if(idx>=0){entries[idx].balance=total;entries[idx].note='API';}else{entries.push({date:today,balance:total,note:'API'});}
     save(); renderDashboard(); toast('CoinEx 동기화 완료: $'+fmt2(total),'ok');
@@ -1263,9 +1268,54 @@ function toast(msg,type='info'){ const ic={ok:'✓',err:'✕',info:'ℹ'}[type]|
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){closeCalDetail();closeManual();closeHodlModal();} });
 
 // ── SEED ─────────────────────────────────────────────────────────────────────
-function seed(){ if(entries.length)return; const off=d=>{const n=new Date();n.setDate(n.getDate()+d);return n.toISOString().split('T')[0];}; entries=[{date:off(-25),balance:10000,note:'시작'},{date:off(-22),balance:10420,note:''},{date:off(-19),balance:10180,note:''},{date:off(-17),balance:10850,note:'강세장'},{date:off(-14),balance:10640,note:''},{date:off(-11),balance:11280,note:'수익일'},{date:off(-9),balance:11050,note:''},{date:off(-7),balance:11600,note:''},{date:off(-5),balance:11380,note:''},{date:off(-3),balance:12100,note:''},{date:off(-2),balance:11870,note:''},{date:off(-1),balance:12050,note:''},{date:off(0),balance:12340,note:'오늘'}]; save(); }
+function seed(){ if(entries.length)return; const off=d=>{const n=new Date();n.setDate(n.getDate()+d);n.setMinutes(n.getMinutes()+n.getTimezoneOffset()+540);return n.toISOString().split('T')[0];}; entries=[{date:off(-25),balance:10000,note:'시작'},{date:off(-22),balance:10420,note:''},{date:off(-19),balance:10180,note:''},{date:off(-17),balance:10850,note:'강세장'},{date:off(-14),balance:10640,note:''},{date:off(-11),balance:11280,note:'수익일'},{date:off(-9),balance:11050,note:''},{date:off(-7),balance:11600,note:''},{date:off(-5),balance:11380,note:''},{date:off(-3),balance:12100,note:''},{date:off(-2),balance:11870,note:''},{date:off(-1),balance:12050,note:''},{date:off(0),balance:12340,note:'오늘'}]; save(); }
 
 seed();
+
+// ── KST 자정 자동 동기화 ────────────────────────────────────────────────────
+// 페이지가 열려 있는 동안 KST 00:00이 되면 자동으로 CoinEx API 동기화 실행
+function scheduleAutoSync() {
+  const now = new Date();
+  // KST 현재 시각
+  const kstNow = new Date(now.getTime() + (now.getTimezoneOffset() + 540) * 60000);
+  // 오늘 KST 자정 + 5초 (정확히 00:00:05에 실행)
+  const kstMidnight = new Date(kstNow);
+  kstMidnight.setHours(0, 0, 5, 0);
+  // 이미 지났으면 내일 자정으로
+  if (kstNow >= kstMidnight) kstMidnight.setDate(kstMidnight.getDate() + 1);
+  const msUntil = kstMidnight - kstNow;
+
+  // 다음 자정까지 남은 시간 표시 (사이드바 footer에)
+  function updateCountdown() {
+    const n = new Date();
+    const kn = new Date(n.getTime() + (n.getTimezoneOffset() + 540) * 60000);
+    const km = new Date(kn); km.setHours(0,0,5,0);
+    if(kn >= km) km.setDate(km.getDate()+1);
+    const diff = km - kn;
+    const hh = String(Math.floor(diff/3600000)).padStart(2,'0');
+    const mm = String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
+    const ss = String(Math.floor((diff%60000)/1000)).padStart(2,'0');
+    const el = document.getElementById('autoSyncCountdown');
+    if(el) el.textContent = hh+':'+mm+':'+ss;
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+
+  console.log(`[AutoSync] 다음 KST 자동 동기화까지 ${Math.round(msUntil/1000/60)}분`);
+
+  setTimeout(async () => {
+    if (coinexApi.key && coinexApi.secret) {
+      toast('⏰ KST 00:00 자동 동기화 실행 중...', 'info');
+      await fetchCoinexBalance(false);
+      toast('✓ 자정 자동 동기화 완료', 'ok');
+    }
+    // 다음날 자정에 또 실행
+    scheduleAutoSync();
+  }, msUntil);
+}
+
+scheduleAutoSync();
+
 document.getElementById('clockEl').textContent=new Date().toLocaleTimeString('ko-KR',{hour12:false});
 renderDashboard();
 </script>
