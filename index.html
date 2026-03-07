@@ -223,8 +223,8 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 /* ── 모바일 반응형 ──────────────────────────────────────────────────────────── */
 @media(max-width:960px){
   .shell{grid-template-columns:1fr;grid-template-rows:52px auto 1fr}
-  .sidebar{display:none!important;position:fixed;top:52px;left:0;width:260px;bottom:0;z-index:400;height:auto;overflow-y:auto;box-shadow:4px 0 24px rgba(0,0,0,.6)}
-  .sidebar.mob-open{display:flex!important}
+  .sidebar{transform:translateX(-100%);position:fixed;top:52px;left:0;width:260px;bottom:0;z-index:400;height:auto;overflow-y:auto;box-shadow:4px 0 24px rgba(0,0,0,.6);transition:transform .25s ease;display:flex;flex-direction:column}
+  .sidebar.mob-open{transform:translateX(0)}
   .kpi-grid,.kpi-grid-2{grid-template-columns:repeat(2,1fr)}
   .chart-row,.chart-row-2{grid-template-columns:1fr}
   .topbar{padding:0 12px}
@@ -342,12 +342,20 @@ async function fbLoad() {
     const snap = await getDoc(doc(fbDb, 'users', fbUid, 'data', 'main'));
     if (snap.exists()) {
       const d = snap.data();
-      if (d.entries)      { entries      = d.entries;      localStorage.setItem('ft_entries',  JSON.stringify(entries)); }
-      if (d.hodlData)     { hodlData     = d.hodlData;     localStorage.setItem('ft_hodl',      JSON.stringify(hodlData)); }
-      if (d.hodlKeys)     { hodlKeys     = d.hodlKeys;     localStorage.setItem('ft_hodlkeys',  JSON.stringify(hodlKeys)); }
-      if (d.coinexApi)    { coinexApi    = d.coinexApi;    localStorage.setItem('ft_coinex',    JSON.stringify(coinexApi)); }
-      if (d.proxyUrl !== undefined) { proxyUrl = d.proxyUrl; localStorage.setItem('ft_proxy', proxyUrl); }
-      if (d.pw)           { localStorage.setItem('ft_pw', d.pw); }
+      if (d.entries)      { entries      = d.entries;      localStorage.setItem('ft_entries',    JSON.stringify(entries)); }
+      if (d.hodlData)     { hodlData     = d.hodlData;     localStorage.setItem('ft_hodl',        JSON.stringify(hodlData)); }
+      if (d.hodlKeys)     { hodlKeys     = d.hodlKeys;     localStorage.setItem('ft_hodlkeys',    JSON.stringify(hodlKeys)); }
+      if (d.coinexApi)    { coinexApi    = d.coinexApi;    localStorage.setItem('ft_coinex',      JSON.stringify(coinexApi)); }
+      if (d.proxyUrl !== undefined) { proxyUrl = d.proxyUrl; localStorage.setItem('ft_proxy',    proxyUrl); }
+      if (d.pw)           {                                  localStorage.setItem('ft_pw',         d.pw); }
+      if (d.baselineDate !== undefined) {
+        baselineDate = d.baselineDate;
+        localStorage.setItem('ft_baseline', baselineDate);
+      }
+      if (d.workerVer !== undefined) {
+        workerVer = d.workerVer;
+        localStorage.setItem('ft_workerver', workerVer);
+      }
       renderDashboard();
       renderSettings();
       toast('☁ 클라우드 데이터 로드 완료', 'ok');
@@ -1044,9 +1052,10 @@ function applyBaseline(){
   const bl=entries.find(e=>e.date===val);
   if(!bl){toast('해당 날짜의 잔고 기록이 없습니다','err');return;}
   baselineDate=val; localStorage.setItem('ft_baseline',baselineDate);
+  if(window.fbSave) window.fbSave({ baselineDate });
   closeBaselineModal(); renderDashboard(); toast('기준시점 설정: '+baselineDate,'ok');
 }
-function clearBaseline(){ baselineDate=''; localStorage.removeItem('ft_baseline'); renderDashboard(); toast('기준시점 초기화','info'); }
+function clearBaseline(){ baselineDate=''; localStorage.removeItem('ft_baseline'); if(window.fbSave) window.fbSave({ baselineDate:'' }); renderDashboard(); toast('기준시점 초기화','info'); }
 function updateBaselineBanner(){
   const banner=document.getElementById('baselineBanner'); if(!banner) return;
   if(baselineDate){ banner.style.display='flex'; document.getElementById('baselineBannerDate').textContent=baselineDate; }
