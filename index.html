@@ -223,7 +223,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 /* ── 모바일 반응형 ──────────────────────────────────────────────────────────── */
 @media(max-width:960px){
   .shell{grid-template-columns:1fr;grid-template-rows:52px auto 1fr}
-  .sidebar{transform:translateX(-100%);position:fixed;top:52px;left:0;width:260px;bottom:0;z-index:400;height:auto;overflow-y:auto;box-shadow:4px 0 24px rgba(0,0,0,.6);transition:transform .25s ease;display:flex;flex-direction:column}
+  .sidebar{transform:translateX(-100%);position:fixed;top:52px;left:0;width:100%;bottom:0;z-index:500;height:auto;overflow-y:auto;transition:transform .25s ease;display:flex;flex-direction:column;background:var(--bg1)}
   .sidebar.mob-open{transform:translateX(0)}
   .kpi-grid,.kpi-grid-2{grid-template-columns:repeat(2,1fr)}
   .chart-row,.chart-row-2{grid-template-columns:1fr}
@@ -272,7 +272,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 .mob-menu-btn{display:none;background:none;border:1px solid var(--bd2);border-radius:4px;color:var(--muted);padding:5px 8px;cursor:pointer;font-size:16px;line-height:1}
 @media(max-width:960px){.mob-menu-btn{display:flex;align-items:center;justify-content:center}}
 /* 모바일 오버레이 배경 */
-.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:399}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:499}
 .mob-overlay.on{display:block}
 /* 모바일 하단 실시간 바 */
 .mob-rt-bar{display:none}
