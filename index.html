@@ -222,9 +222,8 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:var(--bg1)}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:4px}
 /* ── 모바일 반응형 ──────────────────────────────────────────────────────────── */
 @media(max-width:960px){
-  .shell{grid-template-columns:1fr;grid-template-rows:52px auto 1fr}
-  .sidebar{transform:translateX(-100%);position:fixed;top:52px;left:0;width:100%;bottom:0;z-index:500;height:auto;overflow-y:auto;transition:transform .25s ease;display:flex;flex-direction:column;background:var(--bg1)}
-  .sidebar.mob-open{transform:translateX(0)}
+  .shell{grid-template-columns:1fr;grid-template-rows:52px 1fr}
+  .sidebar{display:none!important}
   .kpi-grid,.kpi-grid-2{grid-template-columns:repeat(2,1fr)}
   .chart-row,.chart-row-2{grid-template-columns:1fr}
   .topbar{padding:0 12px}
@@ -271,9 +270,20 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 /* 모바일 햄버거 버튼 */
 .mob-menu-btn{display:none;background:none;border:1px solid var(--bd2);border-radius:4px;color:var(--muted);padding:5px 8px;cursor:pointer;font-size:16px;line-height:1}
 @media(max-width:960px){.mob-menu-btn{display:flex;align-items:center;justify-content:center}}
-/* 모바일 오버레이 배경 */
-.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:499}
-.mob-overlay.on{display:block}
+/* 모바일 풀스크린 메뉴 모달 */
+#mobMenuModal{
+  display:none;
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  width:100vw;height:100vh;
+  background:#060e16;
+  z-index:99999;
+  flex-direction:column;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+#mobMenuModal.on{display:flex!important}
+.mob-overlay{display:none!important}
 /* 모바일 하단 실시간 바 */
 .mob-rt-bar{display:none}
 @media(max-width:960px){
@@ -477,8 +487,42 @@ window.fbSave = fbSave;
   </div>
 </div>
 
-<!-- 모바일 사이드바 오버레이 -->
-<div class="mob-overlay" id="mobOverlay" onclick="closeMobMenu()"></div>
+<!-- 모바일 풀스크린 메뉴 모달 (body 바깥쪽에 독립적으로 위치) -->
+<div id="mobMenuModal">
+  <div style="background:#060e16;border-bottom:1px solid #1a3048;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:2px;color:#fff">MENU</div>
+    <button onclick="closeMobMenu()" style="background:none;border:1px solid #1a3048;border-radius:4px;color:#7eaacc;padding:6px 12px;font-size:16px;cursor:pointer">✕</button>
+  </div>
+  <div style="padding:16px;flex:1">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:3px;color:#7eaacc;padding:8px 4px 6px">MAIN</div>
+    <div onclick="mobNav('dashboard')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#a0c4d8;cursor:pointer;border:1px solid transparent;margin-bottom:4px" id="mobNav-dashboard">
+      <span style="font-size:16px">◈</span> 대시보드
+    </div>
+    <div onclick="mobNav('calendar')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#a0c4d8;cursor:pointer;border:1px solid transparent;margin-bottom:4px" id="mobNav-calendar">
+      <span style="font-size:16px">▦</span> 캘린더
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:3px;color:#7eaacc;padding:12px 4px 6px">SECONDARY</div>
+    <div onclick="mobNav('hodl')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#a0c4d8;cursor:pointer;border:1px solid transparent;margin-bottom:4px" id="mobNav-hodl">
+      <span style="font-size:16px">◫</span> 존버 거래소
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:3px;color:#7eaacc;padding:12px 4px 6px">CONFIG</div>
+    <div onclick="mobNav('settings')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#a0c4d8;cursor:pointer;border:1px solid transparent;margin-bottom:4px" id="mobNav-settings">
+      <span style="font-size:16px">⚙</span> 설정 · API
+    </div>
+    <div onclick="closeMobMenu();openManual();" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#a0c4d8;cursor:pointer;border:1px solid transparent;margin-bottom:4px">
+      <span style="font-size:16px">＋</span> 수동 입력
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid #1a3048">
+      <button onclick="fbSignOut()" style="width:100%;background:none;border:1px solid rgba(255,51,102,.2);border-radius:6px;color:rgba(255,51,102,.7);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;padding:12px;cursor:pointer">🔒 로그아웃</button>
+    </div>
+  </div>
+  <!-- 사이드바 하단 잔고 정보 -->
+  <div style="padding:16px;border-top:1px solid #1a3048;background:#060e16;flex-shrink:0">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:3px;color:#7eaacc;margin-bottom:4px">COINEX BALANCE</div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;color:#00ff88" id="mobMenuBal">$0</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#7eaacc;margin-top:2px" id="mobMenuPnl">—</div>
+  </div>
+</div>
 
 <!-- 모바일 하단 실시간 바 -->
 <div class="mob-rt-bar" id="mobRtBar" style="display:none">
@@ -1790,33 +1834,52 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 
-// ── 모바일 사이드바 토글 ─────────────────────────────────────────────────────
+// ── 모바일 풀스크린 메뉴 ────────────────────────────────────────────────────
 function toggleMobMenu() {
-  const sidebar  = document.querySelector('.sidebar');
-  const overlay  = document.getElementById('mobOverlay');
-  const btn      = document.getElementById('mobMenuBtn');
-  const isOpen   = sidebar.classList.contains('mob-open');
+  const modal = document.getElementById('mobMenuModal');
+  if (!modal) return;
+  const isOpen = modal.classList.contains('on');
   if (isOpen) {
-    sidebar.classList.remove('mob-open');
-    overlay.classList.remove('on');
-    btn.textContent = '☰';
+    modal.classList.remove('on');
+    document.getElementById('mobMenuBtn').textContent = '☰';
+    document.body.style.overflow = '';
   } else {
-    sidebar.classList.add('mob-open');
-    overlay.classList.add('on');
-    btn.textContent = '✕';
+    modal.classList.add('on');
+    document.getElementById('mobMenuBtn').textContent = '✕';
+    document.body.style.overflow = 'hidden';
+    // 잔고 업데이트
+    const balEl = document.getElementById('sfBal');
+    const pnlEl = document.getElementById('sfPnl');
+    const mBal  = document.getElementById('mobMenuBal');
+    const mPnl  = document.getElementById('mobMenuPnl');
+    if (mBal && balEl) mBal.textContent = balEl.textContent;
+    if (mPnl && pnlEl) mPnl.textContent = pnlEl.textContent;
   }
 }
 function closeMobMenu() {
-  document.querySelector('.sidebar').classList.remove('mob-open');
-  document.getElementById('mobOverlay').classList.remove('on');
-  document.getElementById('mobMenuBtn').textContent = '☰';
+  const modal = document.getElementById('mobMenuModal');
+  if (modal) modal.classList.remove('on');
+  const btn = document.getElementById('mobMenuBtn');
+  if (btn) btn.textContent = '☰';
+  document.body.style.overflow = '';
 }
-// 사이드바 메뉴 클릭 시 자동 닫힘
-document.querySelectorAll('.nav-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (window.innerWidth <= 960) closeMobMenu();
+function mobNav(page) {
+  closeMobMenu();
+  // 모든 mobNav 버튼 초기화
+  document.querySelectorAll('[id^="mobNav-"]').forEach(el => {
+    el.style.background = '';
+    el.style.borderColor = 'transparent';
+    el.style.color = '#a0c4d8';
   });
-});
+  // 선택된 버튼 하이라이트
+  const el = document.getElementById('mobNav-' + page);
+  if (el) {
+    el.style.background = 'rgba(0,255,136,.08)';
+    el.style.borderColor = 'rgba(0,255,136,.2)';
+    el.style.color = '#00ff88';
+  }
+  showPage(page);
+}
 
 // ── 실시간 CoinEx 트래킹 ─────────────────────────────────────────────────────
 let rtInterval   = null;  // 1분 갱신 타이머
