@@ -320,10 +320,17 @@ window.fbSignOut = async function() {
 onAuthStateChanged(fbAuth, async (user) => {
   if (user) {
     fbUid = user.uid;
+    window._fbUid = user.uid; // Worker KV 전송용
     updateAuthUI(user);
     await fbLoad();
+    // 로그인 후 실시간 트래킹 시작
+    setTimeout(() => {
+      if(window.startRealtimeTracking)  window.startRealtimeTracking();
+      if(window.scheduleMidnightRecord) window.scheduleMidnightRecord();
+    }, 1000);
   } else {
     fbUid = null;
+    window._fbUid = null;
     updateAuthUI(null);
   }
 });
@@ -413,6 +420,17 @@ window.fbSave = fbSave;
     <div><div class="brand-name">ASSETS TRACKER</div><span class="brand-sub">COINEX · TOTAL ASSETS</span></div>
   </a>
   <div class="topbar-right">
+    <div id="realtimeBox" style="display:none;align-items:center;gap:10px;padding:4px 12px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:6px">
+      <div style="text-align:right">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px">LIVE BALANCE</div>
+        <div id="rtBalance" style="font-family:var(--disp);font-size:16px;font-weight:700;color:#00ff88;letter-spacing:1px">—</div>
+      </div>
+      <div style="text-align:right;border-left:1px solid var(--bd2);padding-left:10px">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px">오늘 PNL</div>
+        <div id="rtPnl" style="font-family:var(--disp);font-size:16px;font-weight:700;letter-spacing:1px">—</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px" id="rtUpdated">—</div>
+    </div>
     <span class="tb-clock" id="clockEl">—</span>
     <div class="live-pill"><div class="live-dot"></div>LIVE</div>
   </div>
@@ -435,7 +453,11 @@ window.fbSave = fbSave;
     <div class="sbf-lbl">COINEX BALANCE</div>
     <div class="sbf-val" id="sfBal">$0</div>
     <div class="sbf-pnl" id="sfPnl">—</div>
-
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
+      <div style="font-family:var(--mono);font-size:7px;letter-spacing:2px;color:var(--muted);margin-bottom:2px">실시간 갱신</div>
+      <div id="rtCountdown" style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--blue);letter-spacing:2px">--:--</div>
+      <div style="font-family:var(--mono);font-size:7px;color:rgba(126,170,204,.4);margin-top:1px;letter-spacing:1px">1분마다 자동 갱신</div>
+    </div>
   </div>
 </nav>
 
@@ -1680,6 +1702,135 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 1000);
+
+// ── 실시간 CoinEx 트래킹 ─────────────────────────────────────────────────────
+let rtInterval   = null;  // 1분 갱신 타이머
+let rtCountTimer = null;  // 카운트다운 타이머
+let rtNextTick   = null;  // 다음 갱신 시각
+let midnightTimer = null; // 자정 자동 기록 타이머
+
+// 오늘 KST 기준 어제 잔고 가져오기
+function getYesterdayBalance() {
+  if (!entries.length) return null;
+  const today = todayStr();
+  const prev  = entries.filter(e => e.date < today);
+  return prev.length ? prev[prev.length - 1] : null;
+}
+
+// 실시간 잔고 UI 업데이트
+function updateRealtimeUI(balance) {
+  const box = document.getElementById('realtimeBox');
+  if (!box) return;
+  box.style.display = 'flex';
+
+  document.getElementById('rtBalance').textContent = '$' + balance.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  // 오늘 PNL = 현재 - 어제 마지막 기록
+  const prev = getYesterdayBalance();
+  const pnlEl = document.getElementById('rtPnl');
+  if (prev) {
+    const pnl  = balance - prev.balance;
+    const pct  = (pnl / prev.balance * 100).toFixed(2);
+    const sign = pnl >= 0 ? '+' : '';
+    pnlEl.textContent = sign + '$' + Math.abs(pnl).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    pnlEl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    document.getElementById('rtUpdated').textContent = sign + pct + '%';
+  } else {
+    pnlEl.textContent = '—';
+    pnlEl.style.color = 'var(--muted)';
+    document.getElementById('rtUpdated').textContent = '전일 데이터 없음';
+  }
+}
+
+// 카운트다운 업데이트
+function updateRtCountdown() {
+  const el = document.getElementById('rtCountdown');
+  if (!el || !rtNextTick) return;
+  const diff = Math.max(0, Math.floor((rtNextTick - Date.now()) / 1000));
+  const m    = String(Math.floor(diff / 60)).padStart(2,'0');
+  const s    = String(diff % 60).padStart(2,'0');
+  el.textContent = m + ':' + s;
+}
+
+// CoinEx 실시간 잔고 조회 (기록 없이 표시만)
+async function fetchRealtimeBalance() {
+  if (!coinexApi.key || !coinexApi.secret) return;
+  try {
+    async function callApi(path) {
+      const ts  = Date.now().toString();
+      const hex = await hmacHex(coinexApi.secret, 'GET' + path + ts);
+      const url = proxyUrl ? proxyUrl + path + '?target=coinex' : 'https://api.coinex.com' + path;
+      const r   = await fetch(url, {
+        headers: { 'X-COINEX-KEY': coinexApi.key, 'X-COINEX-SIGN': hex, 'X-COINEX-TIMESTAMP': ts, 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(8000),
+      });
+      return r.json();
+    }
+    const toItems = d => Array.isArray(d) ? d : (d && typeof d==='object' ? [d] : []);
+    const [s, f, e] = await Promise.all([
+      callApi('/v2/assets/spot/balance'),
+      callApi('/v2/assets/futures/balance'),
+      callApi('/v2/assets/financial/balance'),
+    ]);
+    let total = 0;
+    if (s.code===0) toItems(s.data).forEach(it => { total += parseFloat(it.available||0)+parseFloat(it.frozen||0); });
+    if (f.code===0) toItems(f.data).forEach(it => { total += parseFloat(it.available||0)+parseFloat(it.frozen||0)+parseFloat(it.margin||0)+parseFloat(it.unrealized_pnl||0); });
+    if (e.code===0) toItems(e.data).forEach(it => { total += parseFloat(it.amount||0); });
+    const balance = Math.round(total * 100) / 100;
+    updateRealtimeUI(balance);
+  } catch(err) {
+    console.warn('[RT] 조회 실패:', err.message);
+  }
+}
+
+// 실시간 트래킹 시작 (1분마다 갱신)
+function startRealtimeTracking() {
+  if (!coinexApi.key || !coinexApi.secret) return;
+
+  // 즉시 1회 실행
+  fetchRealtimeBalance();
+
+  // 1분마다 반복
+  clearInterval(rtInterval);
+  rtNextTick  = Date.now() + 60000;
+  rtInterval  = setInterval(() => {
+    fetchRealtimeBalance();
+    rtNextTick = Date.now() + 60000;
+  }, 60000);
+
+  // 카운트다운
+  clearInterval(rtCountTimer);
+  rtCountTimer = setInterval(updateRtCountdown, 1000);
+}
+
+// ── 자정 자동 기록 ────────────────────────────────────────────────────────────
+function scheduleMidnightRecord() {
+  clearTimeout(midnightTimer);
+  const now      = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 3, 0); // 자정 +3초
+  const wait = midnight - now;
+
+  midnightTimer = setTimeout(async () => {
+    if (coinexApi.key && coinexApi.secret) {
+      toast('⏰ 자정 자동 기록 중...', 'info');
+      await fetchCoinexBalance(false); // entries에 기록
+      toast('✓ 자정 자동 기록 완료', 'ok');
+    }
+    scheduleMidnightRecord(); // 다음날 자정 예약
+  }, wait);
+}
+
+// API 키가 있을 때만 실시간 트래킹 시작
+if (coinexApi.key && coinexApi.secret) {
+  startRealtimeTracking();
+  scheduleMidnightRecord();
+}
+
+// saveAndSyncCoinex 후에도 실시간 트래킹 시작되도록 전역 노출
+window.startRealtimeTracking  = startRealtimeTracking;
+window.scheduleMidnightRecord = scheduleMidnightRecord;
+
 renderDashboard();
 </script>
 </body>
