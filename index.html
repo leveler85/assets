@@ -220,8 +220,66 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 .toast-item.ok{border-left:3px solid var(--green)}.toast-item.err{border-left:3px solid var(--red)}.toast-item.info{border-left:3px solid var(--blue)}
 @keyframes slideR{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:var(--bg1)}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:4px}
-@media(max-width:960px){.shell{grid-template-columns:1fr}.sidebar{display:none}.kpi-grid,.kpi-grid-2{grid-template-columns:repeat(2,1fr)}.chart-row,.chart-row-2{grid-template-columns:1fr}}
-@media(max-width:580px){.kpi-grid,.kpi-grid-2{grid-template-columns:1fr 1fr}.main{padding:14px}.kpi-main{font-size:26px}}
+/* ── 모바일 반응형 ──────────────────────────────────────────────────────────── */
+@media(max-width:960px){
+  .shell{grid-template-columns:1fr;grid-template-rows:52px auto 1fr}
+  .sidebar{display:none;position:fixed;top:52px;left:0;right:0;bottom:0;z-index:300;height:auto;overflow-y:auto}
+  .sidebar.mob-open{display:flex}
+  .kpi-grid,.kpi-grid-2{grid-template-columns:repeat(2,1fr)}
+  .chart-row,.chart-row-2{grid-template-columns:1fr}
+  .topbar{padding:0 12px}
+  .brand-sub{display:none}
+  #realtimeBox{display:none!important}
+}
+@media(max-width:580px){
+  html{font-size:13px}
+  .main{padding:12px}
+  .kpi-grid,.kpi-grid-2{grid-template-columns:1fr 1fr;gap:8px}
+  .kpi-card{padding:12px 14px 10px}
+  .kpi-main{font-size:22px}
+  .kpi-label{font-size:8px}
+  .pg-title{font-size:20px}
+  .pg-actions{width:100%}
+  .pg-actions .btn{flex:1;padding:8px 10px;font-size:9px}
+  .panel{padding:14px}
+  .chart-row,.chart-row-2{grid-template-columns:1fr}
+  /* 대시보드 4컬럼 → 2컬럼 */
+  div[style*="grid-template-columns:repeat(4,1fr)"]{grid-template-columns:repeat(2,1fr)!important}
+  div[style*="grid-template-columns:repeat(2,1fr)"]{grid-template-columns:1fr 1fr!important}
+  /* 일별 기록 테이블 */
+  .dt-head,.dt-row{grid-template-columns:18px 70px 1fr 80px 24px!important;font-size:9px}
+  /* 탑바 실시간박스 숨김 */
+  #realtimeBox{display:none!important}
+  .tb-clock{font-size:10px;letter-spacing:1px}
+  .live-pill{display:none}
+  /* 설정 페이지 */
+  .exch-api-fields{grid-template-columns:1fr!important}
+  .form-block{padding:12px}
+  /* 캘린더 */
+  .cal-cell{min-height:52px}
+  .cal-bal{font-size:9px}
+  /* 존버 그리드 */
+  .hodl-grid{grid-template-columns:1fr!important}
+  /* 버튼 */
+  .btn{padding:8px 12px}
+  .btn-sm{padding:4px 8px;font-size:8px}
+  /* 사이드바 모바일 오버레이 */
+  .sidebar{padding:8px 0}
+  .sb-footer{padding:10px}
+  .sbf-val{font-size:18px}
+}
+/* 모바일 햄버거 버튼 */
+.mob-menu-btn{display:none;background:none;border:1px solid var(--bd2);border-radius:4px;color:var(--muted);padding:5px 8px;cursor:pointer;font-size:16px;line-height:1}
+@media(max-width:960px){.mob-menu-btn{display:flex;align-items:center;justify-content:center}}
+/* 모바일 오버레이 배경 */
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:299}
+.mob-overlay.on{display:block}
+/* 모바일 하단 실시간 바 */
+.mob-rt-bar{display:none}
+@media(max-width:960px){
+  .mob-rt-bar{display:flex;position:fixed;bottom:0;left:0;right:0;background:rgba(6,14,22,.97);border-top:1px solid var(--bd2);padding:8px 16px;z-index:200;align-items:center;justify-content:space-between;backdrop-filter:blur(12px)}
+  .main{padding-bottom:72px}
+}
 
 /* ── LOCK SCREEN ─────────────────────────────────────────────────────────── */
 #lockScreen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column}
@@ -411,6 +469,25 @@ window.fbSave = fbSave;
   </div>
 </div>
 
+<!-- 모바일 사이드바 오버레이 -->
+<div class="mob-overlay" id="mobOverlay" onclick="closeMobMenu()"></div>
+
+<!-- 모바일 하단 실시간 바 -->
+<div class="mob-rt-bar" id="mobRtBar" style="display:none">
+  <div>
+    <div style="font-family:var(--mono);font-size:7px;color:var(--muted);letter-spacing:1px">LIVE BALANCE</div>
+    <div id="mobRtBalance" style="font-family:var(--disp);font-size:16px;font-weight:700;color:var(--green)">—</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-family:var(--mono);font-size:7px;color:var(--muted);letter-spacing:1px">오늘 PNL</div>
+    <div id="mobRtPnl" style="font-family:var(--disp);font-size:16px;font-weight:700">—</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-family:var(--mono);font-size:7px;color:var(--muted);letter-spacing:1px">갱신까지</div>
+    <div id="mobRtCountdown" style="font-family:var(--mono);font-size:12px;color:var(--blue)">--:--</div>
+  </div>
+</div>
+
 <div class="shell" id="appShell" style="display:none">
 
 <!-- TOPBAR -->
@@ -420,6 +497,7 @@ window.fbSave = fbSave;
     <div><div class="brand-name">ASSETS TRACKER</div><span class="brand-sub">COINEX · TOTAL ASSETS</span></div>
   </a>
   <div class="topbar-right">
+    <button class="mob-menu-btn" onclick="toggleMobMenu()" id="mobMenuBtn">☰</button>
     <div id="realtimeBox" style="display:none;align-items:center;gap:10px;padding:4px 12px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:6px">
       <div style="text-align:right">
         <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px">LIVE BALANCE</div>
@@ -1703,6 +1781,34 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 
+// ── 모바일 사이드바 토글 ─────────────────────────────────────────────────────
+function toggleMobMenu() {
+  const sidebar  = document.querySelector('.sidebar');
+  const overlay  = document.getElementById('mobOverlay');
+  const btn      = document.getElementById('mobMenuBtn');
+  const isOpen   = sidebar.classList.contains('mob-open');
+  if (isOpen) {
+    sidebar.classList.remove('mob-open');
+    overlay.classList.remove('on');
+    btn.textContent = '☰';
+  } else {
+    sidebar.classList.add('mob-open');
+    overlay.classList.add('on');
+    btn.textContent = '✕';
+  }
+}
+function closeMobMenu() {
+  document.querySelector('.sidebar').classList.remove('mob-open');
+  document.getElementById('mobOverlay').classList.remove('on');
+  document.getElementById('mobMenuBtn').textContent = '☰';
+}
+// 사이드바 메뉴 클릭 시 자동 닫힘
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (window.innerWidth <= 960) closeMobMenu();
+  });
+});
+
 // ── 실시간 CoinEx 트래킹 ─────────────────────────────────────────────────────
 let rtInterval   = null;  // 1분 갱신 타이머
 let rtCountTimer = null;  // 카운트다운 타이머
@@ -1719,37 +1825,56 @@ function getYesterdayBalance() {
 
 // 실시간 잔고 UI 업데이트
 function updateRealtimeUI(balance) {
+  const isMobile = window.innerWidth <= 960;
+  const balStr = '$' + balance.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  // 데스크탑 상단 박스
   const box = document.getElementById('realtimeBox');
-  if (!box) return;
-  box.style.display = 'flex';
+  if (box && !isMobile) box.style.display = 'flex';
 
-  document.getElementById('rtBalance').textContent = '$' + balance.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  // 모바일 하단 바
+  const mobBar = document.getElementById('mobRtBar');
+  if (mobBar) mobBar.style.display = isMobile ? 'flex' : 'none';
 
-  // 오늘 PNL = 현재 - 어제 마지막 기록
-  const prev = getYesterdayBalance();
-  const pnlEl = document.getElementById('rtPnl');
+  // 잔고 표시
+  const rtBal    = document.getElementById('rtBalance');
+  const mobBal   = document.getElementById('mobRtBalance');
+  if (rtBal)  rtBal.textContent  = balStr;
+  if (mobBal) mobBal.textContent = balStr;
+
+  // 오늘 PNL
+  const prev   = getYesterdayBalance();
+  const pnlEl  = document.getElementById('rtPnl');
+  const mobPnl = document.getElementById('mobRtPnl');
+
   if (prev) {
     const pnl  = balance - prev.balance;
     const pct  = (pnl / prev.balance * 100).toFixed(2);
     const sign = pnl >= 0 ? '+' : '';
-    pnlEl.textContent = sign + '$' + Math.abs(pnl).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-    pnlEl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
-    document.getElementById('rtUpdated').textContent = sign + pct + '%';
+    const col  = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    const pnlStr = sign + '$' + Math.abs(pnl).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    if (pnlEl)  { pnlEl.textContent  = pnlStr; pnlEl.style.color  = col; }
+    if (mobPnl) { mobPnl.textContent = pnlStr; mobPnl.style.color = col; }
+    const updEl = document.getElementById('rtUpdated');
+    if (updEl) updEl.textContent = sign + pct + '%';
   } else {
-    pnlEl.textContent = '—';
-    pnlEl.style.color = 'var(--muted)';
-    document.getElementById('rtUpdated').textContent = '전일 데이터 없음';
+    if (pnlEl)  { pnlEl.textContent  = '—'; pnlEl.style.color  = 'var(--muted)'; }
+    if (mobPnl) { mobPnl.textContent = '—'; mobPnl.style.color = 'var(--muted)'; }
   }
 }
 
 // 카운트다운 업데이트
 function updateRtCountdown() {
-  const el = document.getElementById('rtCountdown');
-  if (!el || !rtNextTick) return;
+  if (!rtNextTick) return;
   const diff = Math.max(0, Math.floor((rtNextTick - Date.now()) / 1000));
   const m    = String(Math.floor(diff / 60)).padStart(2,'0');
   const s    = String(diff % 60).padStart(2,'0');
-  el.textContent = m + ':' + s;
+  const str  = m + ':' + s;
+  const el   = document.getElementById('rtCountdown');
+  const mob  = document.getElementById('mobRtCountdown');
+  const sb   = document.getElementById('rtCountdown'); // sidebar
+  if (el)  el.textContent  = str;
+  if (mob) mob.textContent = str;
 }
 
 // CoinEx 실시간 잔고 조회 (기록 없이 표시만)
