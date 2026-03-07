@@ -374,6 +374,13 @@ async function fbLoad() {
       renderDashboard();
       renderSettings();
       toast('☁ 클라우드 데이터 로드 완료', 'ok');
+      // 로드 완료 후 실시간 트래킹 + 자정 스케줄 시작
+      setTimeout(() => {
+        if (coinexApi.key && coinexApi.secret) {
+          if(window.startRealtimeTracking)  window.startRealtimeTracking();
+          if(window.scheduleMidnightRecord) window.scheduleMidnightRecord();
+        }
+      }, 500);
     }
   } catch(e) { console.error('Firestore 로드 실패:', e); }
 }
@@ -2016,14 +2023,18 @@ function scheduleMidnightRecord() {
   midnightTimer = setTimeout(async () => {
     if (coinexApi.key && coinexApi.secret) {
       toast('⏰ 자정 자동 기록 중...', 'info');
-      await fetchCoinexBalance(false); // entries에 기록
-      toast('✓ 자정 자동 기록 완료', 'ok');
+      try {
+        await fetchCoinexBalance(true); // entries에 기록 + 화면 갱신
+        toast('✓ 자정 자동 기록 완료', 'ok');
+      } catch(e) {
+        toast('⚠ 자정 자동 기록 실패: ' + e.message, 'err');
+      }
     }
     scheduleMidnightRecord(); // 다음날 자정 예약
   }, wait);
 }
 
-// API 키가 있을 때만 실시간 트래킹 시작
+// API 키가 있을 때만 실시간 트래킹 시작 (Firebase 로드 전 로컬캐시 기반)
 if (coinexApi.key && coinexApi.secret) {
   startRealtimeTracking();
   scheduleMidnightRecord();
