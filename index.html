@@ -238,6 +238,143 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 .lock-hint{font-family:var(--mono);font-size:8px;color:rgba(126,170,204,.35);margin-top:20px;letter-spacing:1px}
 @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
 </style>
+<script type="module">
+// ══════════════════════════════════════════════════════════════════════════════
+// FIREBASE — Google 로그인 + Firestore DB
+// ══════════════════════════════════════════════════════════════════════════════
+import { initializeApp }                          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+                                                  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+                                                  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey:            'AIzaSyBO9PKjdn-ZhjSMkBXKPp76wlD-kVvd-CU',
+  authDomain:        'assets-tracker-3f2a4.firebaseapp.com',
+  projectId:         'assets-tracker-3f2a4',
+  storageBucket:     'assets-tracker-3f2a4.firebasestorage.app',
+  messagingSenderId: '148250561704',
+  appId:             '1:148250561704:web:253c58882d7f3edcaa469d',
+};
+
+const fbApp  = initializeApp(firebaseConfig);
+const fbAuth = getAuth(fbApp);
+const fbDb   = getFirestore(fbApp);
+
+// ── 현재 유저 UID ──────────────────────────────────────────────────────────────
+let fbUid = null;
+let fbUnsub = null; // Firestore 실시간 리스너 해제용
+
+// ── Firestore 저장 (debounce 300ms) ───────────────────────────────────────────
+let _saveTimer = null;
+function fbSave(partial) {
+  if (!fbUid) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async () => {
+    try {
+      await setDoc(doc(fbDb, 'users', fbUid, 'data', 'main'), partial, { merge: true });
+    } catch(e) { console.error('Firestore 저장 실패:', e); }
+  }, 300);
+}
+
+// ── Firestore에서 전체 데이터 로드 ────────────────────────────────────────────
+async function fbLoad() {
+  if (!fbUid) return;
+  try {
+    const snap = await getDoc(doc(fbDb, 'users', fbUid, 'data', 'main'));
+    if (snap.exists()) {
+      const d = snap.data();
+      if (d.entries)      { entries      = d.entries;      localStorage.setItem('ft_entries',  JSON.stringify(entries)); }
+      if (d.hodlData)     { hodlData     = d.hodlData;     localStorage.setItem('ft_hodl',      JSON.stringify(hodlData)); }
+      if (d.hodlKeys)     { hodlKeys     = d.hodlKeys;     localStorage.setItem('ft_hodlkeys',  JSON.stringify(hodlKeys)); }
+      if (d.coinexApi)    { coinexApi    = d.coinexApi;    localStorage.setItem('ft_coinex',    JSON.stringify(coinexApi)); }
+      if (d.proxyUrl !== undefined) { proxyUrl = d.proxyUrl; localStorage.setItem('ft_proxy', proxyUrl); }
+      if (d.pw)           { localStorage.setItem('ft_pw', d.pw); }
+      renderDashboard();
+      renderSettings();
+      toast('☁ 클라우드 데이터 로드 완료', 'ok');
+    }
+  } catch(e) { console.error('Firestore 로드 실패:', e); }
+}
+
+// ── 구글 로그인 ───────────────────────────────────────────────────────────────
+window.fbSignIn = async function() {
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(fbAuth, provider);
+  } catch(e) {
+    console.error('로그인 실패:', e);
+    toast('Google 로그인 실패: ' + e.message, 'err');
+  }
+};
+
+// ── 로그아웃 ──────────────────────────────────────────────────────────────────
+window.fbSignOut = async function() {
+  await signOut(fbAuth);
+  fbUid = null;
+  updateAuthUI(null);
+  toast('로그아웃 완료', 'info');
+};
+
+// ── Auth 상태 감지 ────────────────────────────────────────────────────────────
+onAuthStateChanged(fbAuth, async (user) => {
+  if (user) {
+    fbUid = user.uid;
+    updateAuthUI(user);
+    await fbLoad();
+  } else {
+    fbUid = null;
+    updateAuthUI(null);
+  }
+});
+
+// ── 로그인 상태 UI 업데이트 ───────────────────────────────────────────────────
+function updateAuthUI(user) {
+  const lockScreen = document.getElementById('lockScreen');
+  const appShell   = document.getElementById('appShell');
+
+  if (user) {
+    // 로그인 완료 → 앱 표시
+    if(lockScreen) lockScreen.style.display = 'none';
+    if(appShell)   appShell.style.display   = '';
+
+    // 로그인 버튼/로그아웃 버튼
+    const loginBtn  = document.getElementById('fbLoginBtn');
+    const loginBtn2 = document.getElementById('fbLoginBtn2');
+    const logoutBtn = document.getElementById('fbLogoutBtn');
+    const logoutBtn2= document.getElementById('fbLogoutBtn2');
+    const userInfo  = document.getElementById('fbUserInfo');
+    const userInfo2 = document.getElementById('fbUserInfo2');
+    if(loginBtn)   loginBtn.style.display   = 'none';
+    if(loginBtn2)  loginBtn2.style.display  = 'none';
+    if(logoutBtn)  logoutBtn.style.display  = 'block';
+    if(logoutBtn2) logoutBtn2.style.display = 'block';
+    if(userInfo)   userInfo.textContent     = user.email;
+    if(userInfo2)  userInfo2.textContent    = user.email;
+  } else {
+    // 로그아웃 → 로그인 화면
+    if(lockScreen) lockScreen.style.display = '';
+    if(appShell)   appShell.style.display   = 'none';
+
+    const loginBtn  = document.getElementById('fbLoginBtn');
+    const loginBtn2 = document.getElementById('fbLoginBtn2');
+    const logoutBtn = document.getElementById('fbLogoutBtn');
+    const logoutBtn2= document.getElementById('fbLogoutBtn2');
+    const userInfo  = document.getElementById('fbUserInfo');
+    const userInfo2 = document.getElementById('fbUserInfo2');
+    if(loginBtn)   loginBtn.style.display   = 'block';
+    if(loginBtn2)  loginBtn2.style.display  = 'block';
+    if(logoutBtn)  logoutBtn.style.display  = 'none';
+    if(logoutBtn2) logoutBtn2.style.display = 'none';
+    if(userInfo)   userInfo.textContent     = '로그인 안 됨';
+    if(userInfo2)  userInfo2.textContent    = '로그인 안 됨';
+  }
+}
+
+// ── 전역 fbSave 노출 ──────────────────────────────────────────────────────────
+window.fbSave = fbSave;
+</script>
+
 </head>
 <body>
 
@@ -255,13 +392,15 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 <div id="lockScreen">
   <div class="lock-box">
     <div class="lock-icon">🔐</div>
-    <div class="lock-title">FUTURES <span style="color:var(--green)">TRACKER</span></div>
-    <div class="lock-sub">개인 자산 트래커 · 비밀번호 입력</div>
-    <input class="lock-input" type="password" id="lockPw" placeholder="••••••" maxlength="20"
-      onkeydown="if(event.key==='Enter')checkLock()">
-    <button class="lock-btn" onclick="checkLock()">잠금 해제</button>
+    <div class="lock-title">ASSETS <span style="color:var(--green)">TRACKER</span></div>
+    <div class="lock-sub">개인 자산 트래커 · Google 로그인</div>
+    <button class="lock-btn" onclick="fbSignIn()" id="fbLoginBtn"
+      style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Google로 로그인
+    </button>
     <div class="lock-err" id="lockErr"></div>
-    <div class="lock-hint">기본 비밀번호: 1234 · 설정에서 변경 가능</div>
+    <div class="lock-hint" id="fbUserInfo" style="color:var(--muted)">로그인 안 됨</div>
   </div>
 </div>
 
@@ -290,7 +429,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
   <div class="nav-btn" id="nav-settings" onclick="showPage('settings')"><span class="nav-icon">⚙</span>설정 · API</div>
   <div class="nav-btn" onclick="openManual()"><span class="nav-icon">＋</span>수동 입력</div>
   <div style="padding:8px 10px;border-top:1px solid var(--bd)">
-    <button onclick="sessionStorage.removeItem('ft_unlocked');location.reload()" style="width:100%;background:none;border:1px solid rgba(255,51,102,.2);border-radius:4px;color:rgba(255,51,102,.6);font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:7px;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red)'" onmouseout="this.style.color='rgba(255,51,102,.6)';this.style.borderColor='rgba(255,51,102,.2)'">🔒 잠금</button>
+    <button id="fbLogoutBtn" onclick="fbSignOut()" style="display:none;width:100%;background:none;border:1px solid rgba(255,51,102,.2);border-radius:4px;color:rgba(255,51,102,.6);font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:7px;cursor:pointer;transition:all .15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red)'" onmouseout="this.style.color='rgba(255,51,102,.6)';this.style.borderColor='rgba(255,51,102,.2)'">🔒 로그아웃</button>
   </div>
   <div class="sb-footer">
     <div class="sbf-lbl">COINEX BALANCE</div>
@@ -522,7 +661,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
         <div class="f-group"><label class="f-label">API SECRET</label><input class="f-input" type="password" id="apiSecret" placeholder="CoinEx API Secret"></div>
       </div>
       <div class="f-note" style="margin-bottom:12px">
-        ⚠ 읽기 전용(Read Only) 키 사용 권장 · API 키는 localStorage에만 저장됨<br>
+        ⚠ 읽기 전용(Read Only) 키 사용 권장 · Google 로그인 시 클라우드에 암호화 저장됨<br>
         ℹ Worker URL 없으면 CORS 오류 — Worker 먼저 설정 필요
       </div>
       <div id="apiResult" class="api-result"></div>
@@ -548,12 +687,22 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 
     <div class="divider"></div>
     <div class="proxy-card" style="margin-bottom:20px">
-      <div class="pc-title">④ 비밀번호 변경</div>
+      <div class="pc-title">④ Google 계정</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div id="fbUserInfo2" style="font-family:var(--mono);font-size:11px;color:var(--muted);flex:1">로그인 안 됨</div>
+        <button class="btn btn-ghost btn-sm" id="fbLoginBtn2" onclick="fbSignIn()">Google 로그인</button>
+        <button class="btn btn-ghost btn-sm" id="fbLogoutBtn2" onclick="fbSignOut()" style="display:none;color:var(--red)">로그아웃</button>
+      </div>
+      <div class="f-note">☁ Google 로그인 시 모든 데이터가 클라우드에 저장되어 기기간 동기화됩니다</div>
+    </div>
+    <div class="divider"></div>
+    <div class="proxy-card" style="margin-bottom:20px">
+      <div class="pc-title">⑤ 비밀번호 변경</div>
       <div class="form-block" style="margin-bottom:12px;gap:12px">
         <div class="f-group"><label class="f-label">새 비밀번호</label><input class="f-input" type="password" id="newPw1" placeholder="새 비밀번호 입력 (4자 이상)"></div>
         <div class="f-group"><label class="f-label">비밀번호 확인</label><input class="f-input" type="password" id="newPw2" placeholder="새 비밀번호 재입력"></div>
       </div>
-      <div class="f-note" style="margin-bottom:12px">⚠ 비밀번호는 이 기기 localStorage에만 저장됩니다<br>기본 비밀번호: <strong style="color:var(--amber)">1234</strong></div>
+      <div class="f-note" style="margin-bottom:12px">⚠ Google 로그인 시 비밀번호도 클라우드에 저장되어 기기간 동기화됩니다</div>
       <button class="btn btn-primary" style="width:100%" onclick="changePw()">비밀번호 변경</button>
     </div>
     <div class="divider"></div>
@@ -643,15 +792,8 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 'use strict';
 
 // ── LOCK / PASSWORD ─────────────────────────────────────────────────────────
-(function initLock(){
-  const session=sessionStorage.getItem('ft_unlocked');
-  if(session==='1'){
-    document.getElementById('lockScreen').style.display='none';
-    document.getElementById('appShell').style.display='';
-    return;
-  }
-  setTimeout(()=>{ const el=document.getElementById('lockPw'); if(el) el.focus(); },100);
-})();
+// Google Auth가 로그인 상태 감지해서 자동으로 lockScreen/appShell 처리함
+// onAuthStateChanged → 로그인 시 appShell 표시, 로그아웃 시 lockScreen 표시
 // ── 커스텀 Confirm ───────────────────────────────────────────────────────────
 function confirmModal(msg, yesCb, yesTxt) {
   const modal = document.getElementById('confirmModal');
@@ -665,22 +807,6 @@ function confirmModal(msg, yesCb, yesTxt) {
   no.onclick  = () => close();
 }
 
-function checkLock(){
-  const stored=localStorage.getItem('ft_pw')||'1234';
-  const val=document.getElementById('lockPw').value;
-  const errEl=document.getElementById('lockErr');
-  if(val===stored){
-    sessionStorage.setItem('ft_unlocked','1');
-    document.getElementById('lockScreen').style.display='none';
-    document.getElementById('appShell').style.display='';
-    errEl.textContent='';
-  } else {
-    const inp=document.getElementById('lockPw');
-    inp.classList.add('err'); inp.value='';
-    errEl.textContent='비밀번호가 틀렸습니다';
-    setTimeout(()=>{ inp.classList.remove('err'); inp.focus(); },400);
-  }
-}
 function changePw(){
   const p1=document.getElementById('newPw1').value;
   const p2=document.getElementById('newPw2').value;
@@ -688,6 +814,7 @@ function changePw(){
   if(p1!==p2){toast('비밀번호가 일치하지 않습니다','err');return;}
   if(p1.length<4){toast('비밀번호는 4자 이상이어야 합니다','err');return;}
   localStorage.setItem('ft_pw',p1);
+  if(window.fbSave) window.fbSave({pw: p1});
   document.getElementById('newPw1').value='';
   document.getElementById('newPw2').value='';
   toast('비밀번호 변경 완료','ok');
@@ -720,10 +847,23 @@ let calY = new Date().getFullYear(), calM = new Date().getMonth();
 let chartTab = 'bal', charts = {}, selEx = HODL_EX[0].id;
 
 // ── PERSIST ──────────────────────────────────────────────────────────────────
-const save       = () => { entries.sort((a,b)=>a.date.localeCompare(b.date)); localStorage.setItem('ft_entries', JSON.stringify(entries)); };
-const saveHodl   = () => localStorage.setItem('ft_hodl',     JSON.stringify(hodlData));
-const saveHodlK  = () => localStorage.setItem('ft_hodlkeys', JSON.stringify(hodlKeys));
-const saveProxy  = () => localStorage.setItem('ft_proxy',    proxyUrl);
+const save       = () => {
+  entries.sort((a,b)=>a.date.localeCompare(b.date));
+  localStorage.setItem('ft_entries', JSON.stringify(entries));
+  if(window.fbSave) window.fbSave({ entries });
+};
+const saveHodl   = () => {
+  localStorage.setItem('ft_hodl', JSON.stringify(hodlData));
+  if(window.fbSave) window.fbSave({ hodlData });
+};
+const saveHodlK  = () => {
+  localStorage.setItem('ft_hodlkeys', JSON.stringify(hodlKeys));
+  if(window.fbSave) window.fbSave({ hodlKeys });
+};
+const saveProxy  = () => {
+  localStorage.setItem('ft_proxy', proxyUrl);
+  if(window.fbSave) window.fbSave({ proxyUrl });
+};
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 const todayStr = () => { const d=new Date(new Date().getTime()+9*3600*1000); return d.toISOString().split('T')[0]; };
@@ -996,6 +1136,7 @@ async function saveAndSyncCoinex(){
   const k=document.getElementById('apiKey').value.trim(), s=document.getElementById('apiSecret').value.trim();
   if(!k||!s){toast('API 키와 시크릿을 입력하세요','err');return;}
   coinexApi={key:k,secret:s}; localStorage.setItem('ft_coinex',JSON.stringify(coinexApi));
+  if(window.fbSave) window.fbSave({ coinexApi });
   renderSettings(); toast('저장 완료. 잔고 조회 중...','info');
   await fetchCoinexBalance(true);
 }
